@@ -1,13 +1,29 @@
 services:
+  # Next.js Frontend Web Service on Render
+  - type: web
+    name: giftora-frontend
+    env: node
+    plan: free
+    buildCommand: npm install && npm run build
+    startCommand: npm start
+    envVars:
+      - key: NODE_VERSION
+        value: 20.18.0
+      - key: NEXT_PUBLIC_API_URL
+        value: https://giftora-api.onrender.com
+
+  # FastAPI Backend Web Service on Render
   - type: web
     name: giftora-api
     env: python
     rootDir: backend
+    plan: free
     buildCommand: pip install -r requirements.txt
     startCommand: uvicorn app.main:app --host 0.0.0.0 --port $PORT
-    plan: free
     healthCheckPath: /health
     envVars:
+      - key: PYTHON_VERSION
+        value: 3.11.9
       - key: ENVIRONMENT
         value: production
       - key: DEBUG
@@ -25,4 +41,4 @@ services:
       - key: GEMINI_MODEL
         value: gemini-1.5-flash
       - key: CORS_ORIGINS
-        value: "https://giftora.vercel.app,http://localhost:3000"
+        value: "https://giftora-frontend.onrender.com,http://localhost:3000,https://giftora.vercel.app"

@@ -1,21 +1,8 @@
 import type { Metadata } from "next";
 import Script from "next/script";
-import { Playfair_Display, Plus_Jakarta_Sans } from "next/font/google";
 import "./globals.css";
 import { GiftoraProvider } from "@/context/GiftoraContext";
 import { ThemeProvider } from "@/context/ThemeContext";
-
-const playfair = Playfair_Display({
-  subsets: ["latin"],
-  variable: "--font-playfair",
-  display: "swap",
-});
-
-const plusJakarta = Plus_Jakarta_Sans({
-  subsets: ["latin"],
-  variable: "--font-jakarta",
-  display: "swap",
-});
 
 export const metadata: Metadata = {
   title: "Giftora | AI-Powered Personalized Gift Discovery & Shopping",
@@ -37,7 +24,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" suppressHydrationWarning className={`${playfair.variable} ${plusJakarta.variable}`}>
+    <html lang="en" suppressHydrationWarning>
       <head>
         <Script id="giftora-theme-init" strategy="beforeInteractive">
           {`

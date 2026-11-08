@@ -1,6 +1,6 @@
 from datetime import datetime
 from typing import List, Optional
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_validator
 from app.schemas.product import ProductSourceResponse
 
 
@@ -34,6 +34,13 @@ class WishlistResponse(BaseModel):
 class ComparisonCreateRequest(BaseModel):
     product_source_ids: List[str] = Field(..., min_length=1, max_length=4)
     search_session_id: Optional[str] = None
+
+    @field_validator("product_source_ids")
+    @classmethod
+    def unique_product_sources(cls, value: List[str]) -> List[str]:
+        if len(value) != len(set(value)):
+            raise ValueError("Comparison products must be unique")
+        return value
 
 
 class ComparisonItemResponse(BaseModel):

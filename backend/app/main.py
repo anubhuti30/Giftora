@@ -1,8 +1,10 @@
 import logging
 from contextlib import asynccontextmanager
-from fastapi import FastAPI
+from fastapi import FastAPI, Request, status
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
+from fastapi.exceptions import RequestValidationError
+from sqlalchemy.exc import SQLAlchemyError
 
 from app.core.config import settings
 from app.core.database import check_database_health
@@ -31,8 +33,9 @@ logger = logging.getLogger("giftora.api")
 async def lifespan(app: FastAPI):
     # Startup validation
     logger.info("Initializing Giftora API Backend...")
-    db_connected = check_database_health()
-    if db_connected:
+    settings.validate_deployment()
+    db_health = check_database_health()
+    if db_health.get("connected"):
         logger.info(f"Connected to MySQL 8.0 database '{settings.DB_NAME}' on {settings.DB_HOST}:{settings.DB_PORT}")
     else:
         logger.warning(
@@ -56,20 +59,32 @@ app = FastAPI(
     lifespan=lifespan,
 )
 
+
+@app.exception_handler(RequestValidationError)
+async def validation_exception_handler(_: Request, exc: RequestValidationError):
+    return JSONResponse(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, content={"error": {"code": "VALIDATION_ERROR", "message": "Request validation failed", "details": exc.errors()}})
+
+
+@app.exception_handler(SQLAlchemyError)
+async def database_exception_handler(_: Request, exc: SQLAlchemyError):
+    logger.exception("Database operation failed", extra={"error_type": type(exc).__name__})
+    return JSONResponse(status_code=status.HTTP_503_SERVICE_UNAVAILABLE, content={"error": {"code": "DATABASE_UNAVAILABLE", "message": "The database is temporarily unavailable."}})
+
+
+@app.exception_handler(Exception)
+async def unhandled_exception_handler(_: Request, exc: Exception):
+    logger.exception("Unhandled API error", extra={"error_type": type(exc).__name__})
+    return JSONResponse(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, content={"error": {"code": "INTERNAL_ERROR", "message": "An unexpected server error occurred."}})
+
 # Configure Cross-Origin Resource Sharing (CORS)
-origins = [
-    "http://localhost:3000",
-    "http://127.0.0.1:3000",
-    "http://localhost:3001",
-    "http://127.0.0.1:3001",
-]
-if isinstance(settings.CORS_ORIGINS, list):
-    origins.extend(settings.CORS_ORIGINS)
+origins = list(settings.CORS_ORIGINS)
+if settings.ENVIRONMENT.lower() != "production":
+    origins.extend(["http://localhost:3000", "http://127.0.0.1:3000", "http://localhost:3001", "http://127.0.0.1:3001"])
 
 app.add_middleware(
     CORSMiddleware,
     allow_origins=list(dict.fromkeys(origins)),
-    allow_origin_regex=r"https://.*\.vercel\.app",
+    allow_origin_regex=r"https://.*\.vercel\.app" if settings.ENVIRONMENT.lower() != "production" else None,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],

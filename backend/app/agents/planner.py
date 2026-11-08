@@ -9,8 +9,8 @@ def plan_search_node(state: AgentWorkflowState) -> Dict[str, Any]:
 
     # Merge explicit inputs with extracted criteria
     interests = list(set(state.user_interests + extracted.interests))
-    relationship = state.relationship or extracted.relationship or "Someone Special"
-    occasion = state.occasion or extracted.occasion or "Celebration"
+    relationship = state.relationship or extracted.relationship
+    occasion = state.occasion or extracted.occasion
 
     min_budget = state.minimum_budget
     if min_budget is None and extracted.minimum_budget:
@@ -27,6 +27,9 @@ def plan_search_node(state: AgentWorkflowState) -> Dict[str, Any]:
             "interests": interests,
             "aesthetics": extracted.aesthetics,
             "clarifying_question": extracted.clarifying_question,
+            "recipient_name": state.recipient_name or extracted.recipient_name,
+            "minimum_budget": min_budget,
+            "maximum_budget": max_budget,
         },
         "user_interests": interests,
         "relationship": relationship,

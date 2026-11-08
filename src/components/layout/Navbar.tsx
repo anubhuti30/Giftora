@@ -12,8 +12,6 @@ import {
   X, 
   ArrowRight,
   Compass,
-  Calendar,
-  HelpCircle,
   LogOut,
   Settings,
   Sun,
@@ -36,7 +34,8 @@ export function Navbar() {
   const [themeDropdownOpen, setThemeDropdownOpen] = useState(false);
 
   useEffect(() => {
-    setMounted(true);
+    const timer = window.setTimeout(() => setMounted(true), 0);
+    return () => window.clearTimeout(timer);
   }, []);
 
   return (

@@ -137,3 +137,10 @@ Detailed architectural design specifications and schema references:
 - **[System Architecture](docs/architecture.md)**
 - **[Database Design & ERD](docs/database-design.md)**
 - **[REST API Documentation](docs/api-documentation.md)**
+
+## Known limitations
+
+- Marketplace connectors currently return clearly labelled development mock catalogues when credentials are absent. The live Amazon, Flipkart, and Myntra request implementations are not present, so configured credentials alone do not enable live search.
+- Gemini extraction is optional. When it is unavailable or returns invalid structured data, Giftora uses a deterministic extraction fallback and leaves unknown budgets/preferences unset.
+- The checked-in `database/schema.sql` is a destructive local bootstrap script, not a production migration. There are currently no Alembic revision files; do not run that script against an existing database.
+- A subset of the frontend still uses local storage for demo/offline state. Backend persistence should be treated as authoritative only for flows that explicitly call the API client.

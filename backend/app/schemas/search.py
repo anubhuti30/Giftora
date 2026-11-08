@@ -1,7 +1,7 @@
 from datetime import datetime
 from decimal import Decimal
 from typing import List, Optional, Dict, Any
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, model_validator
 from app.schemas.product import ProductSourceResponse
 
 
@@ -15,6 +15,12 @@ class GiftSearchRequest(BaseModel):
     maximum_budget: Optional[Decimal] = None
     query: Optional[str] = None
     conversation_id: Optional[str] = None
+
+    @model_validator(mode="after")
+    def validate_budget_range(self):
+        if self.minimum_budget is not None and self.maximum_budget is not None and self.minimum_budget > self.maximum_budget:
+            raise ValueError("minimum_budget cannot exceed maximum_budget")
+        return self
 
 
 class RecommendationResponse(BaseModel):

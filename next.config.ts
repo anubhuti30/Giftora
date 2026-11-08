@@ -11,6 +11,9 @@ const nextConfig: NextConfig = {
     ],
   },
   turbopack: {
+    // This repository is nested below another package lockfile on some hosts.
+    // Pinning the root prevents Turbopack from selecting the parent directory.
+    root: process.cwd(),
     rules: {
       "*.css": {
         loaders: ["@tailwindcss/turbopack"],

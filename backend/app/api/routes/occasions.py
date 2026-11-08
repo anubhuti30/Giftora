@@ -7,6 +7,7 @@ from app.core.database import get_db
 from app.api.deps import get_current_user
 from app.models.user import User
 from app.models.recipient import Occasion
+from app.models.recipient import Recipient
 
 router = APIRouter(prefix="/occasions", tags=["Occasions & Milestones"])
 
@@ -50,6 +51,10 @@ def create_occasion(
     db: Session = Depends(get_db),
 ):
     """Creates a calendar occasion with automated gift reminders."""
+    if request.recipient_id:
+        recipient = db.query(Recipient.id).filter(Recipient.id == request.recipient_id, Recipient.user_id == current_user.id).first()
+        if not recipient:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Recipient profile not found")
     occasion = Occasion(
         user_id=current_user.id,
         recipient_id=request.recipient_id,

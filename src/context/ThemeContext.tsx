@@ -18,11 +18,12 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
   const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
-    setMounted(true);
-    const saved = localStorage.getItem("giftora_theme") as ThemeMode | null;
-    if (saved && (saved === "light" || saved === "dark" || saved === "system")) {
-      setThemeState(saved);
-    }
+    const timer = window.setTimeout(() => {
+      setMounted(true);
+      const saved = localStorage.getItem("giftora_theme") as ThemeMode | null;
+      if (saved && (saved === "light" || saved === "dark" || saved === "system")) setThemeState(saved);
+    }, 0);
+    return () => window.clearTimeout(timer);
   }, []);
 
   useEffect(() => {

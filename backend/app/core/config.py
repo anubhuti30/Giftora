@@ -84,7 +84,19 @@ class Settings(BaseSettings):
 
         # Otherwise construct PyMySQL URL from individual environment variables
         encoded_password = urllib.parse.quote_plus(self.DB_PASSWORD)
-        return f"mysql+pymysql://{self.DB_USER}:{encoded_password}@{self.DB_HOST}:{self.DB_PORT}/{self.DB_NAME}?charset=utf8mb4"
+        # Bound initial connection attempts so readiness checks and request workers do not hang
+        # indefinitely when the database host is unavailable.
+        return f"mysql+pymysql://{self.DB_USER}:{encoded_password}@{self.DB_HOST}:{self.DB_PORT}/{self.DB_NAME}?charset=utf8mb4&connect_timeout=5"
+
+    def validate_deployment(self) -> None:
+        """Reject unsafe production defaults before accepting traffic."""
+        if self.ENVIRONMENT.lower() == "production":
+            if self.DEBUG:
+                raise ValueError("DEBUG must be false in production")
+            if self.SECRET_KEY == "giftora_dev_secret_key_change_in_production_9f82d1b4c7a6e5" or len(self.SECRET_KEY) < 32:
+                raise ValueError("A unique SECRET_KEY of at least 32 characters is required in production")
+            if not self.CORS_ORIGINS:
+                raise ValueError("CORS_ORIGINS must list the deployed frontend origin in production")
 
 
 settings = Settings()

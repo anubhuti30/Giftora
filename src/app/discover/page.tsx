@@ -219,6 +219,11 @@ function DiscoverContent() {
       });
 
       if (res?.search_id) {
+        // Guest searches are intentionally not persisted server-side. Preserve the
+        // exact API response for the results route instead of substituting mock data.
+        try {
+          sessionStorage.setItem(`giftora_search_${res.search_id}`, JSON.stringify(res.recommendations));
+        } catch {}
         router.push(`/discover/results?search_id=${res.search_id}`);
       } else {
         router.push("/discover/results");

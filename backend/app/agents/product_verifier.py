@@ -23,8 +23,4 @@ def verify_products_node(state: AgentWorkflowState) -> Dict[str, Any]:
         maximum_budget=state.maximum_budget,
     )
 
-    # Fallback to in_stock_candidates if budget was too restrictive and pruned everything
-    if not validated and in_stock_candidates:
-        validated = in_stock_candidates[:10]
-
     return {"validated_products": validated}

@@ -7,6 +7,7 @@ from app.core.database import get_db
 from app.api.deps import get_current_user, get_current_user_optional
 from app.models.user import User
 from app.models.conversation import Conversation, Message
+from app.models.recipient import Recipient
 from app.schemas.chat import ChatRequest, ChatResponse, MessageResponse, ConversationResponse
 from app.services.ai_service import ai_service
 
@@ -26,6 +27,11 @@ def handle_chat_message(
     user_id = current_user.id if current_user else None
     conv_id = request.conversation_id or str(uuid.uuid4())
 
+    if current_user and request.recipient_id:
+        recipient = db.query(Recipient.id).filter(Recipient.id == request.recipient_id, Recipient.user_id == current_user.id).first()
+        if not recipient:
+            raise HTTPException(status_code=404, detail="Recipient profile not found")
+
     # If user is authenticated and DB is available, get or create conversation
     db_conv = None
     if current_user:
@@ -35,6 +41,9 @@ def handle_chat_message(
                     Conversation.id == request.conversation_id,
                     Conversation.user_id == current_user.id,
                 ).first()
+
+                if not db_conv:
+                    raise HTTPException(status_code=404, detail="Conversation not found")
 
             if not db_conv:
                 db_conv = Conversation(
@@ -54,8 +63,12 @@ def handle_chat_message(
             )
             db.add(user_msg)
             db.commit()
+        except HTTPException:
+            db.rollback()
+            raise
         except Exception:
             db.rollback()
+            raise HTTPException(status_code=503, detail="Conversation could not be saved. Please retry.")
 
     # Build chat history from request or database
     history = request.chat_history or []
@@ -101,6 +114,7 @@ def handle_chat_message(
             db.commit()
         except Exception:
             db.rollback()
+            raise HTTPException(status_code=503, detail="Assistant response could not be saved. Please retry.")
 
     quick_replies = [
         "Find gifts under ₹3,000",

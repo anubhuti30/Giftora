@@ -5,6 +5,8 @@ from app.core.database import get_db
 from app.api.deps import get_current_user
 from app.models.user import User
 from app.models.shopping import Comparison
+from app.models.conversation import SearchSession
+from app.models.product import ProductSource
 from app.repositories.shopping_repo import ShoppingRepository
 from app.schemas.shopping import ComparisonCreateRequest
 
@@ -25,6 +27,13 @@ def create_product_comparison(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Comparison requires between 1 and 4 products",
         )
+    sources_count = db.query(ProductSource.id).filter(ProductSource.id.in_(request.product_source_ids)).count()
+    if sources_count != len(request.product_source_ids):
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="One or more products were not found")
+    if request.search_session_id:
+        session = db.query(SearchSession.id).filter(SearchSession.id == request.search_session_id, SearchSession.user_id == current_user.id).first()
+        if not session:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Search session not found")
 
     repo = ShoppingRepository(db)
     comparison = repo.create_comparison(

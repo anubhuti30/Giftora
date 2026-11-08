@@ -1,4 +1,6 @@
-from datetime import datetime
+from datetime import datetime, timezone
+from fastapi import status
+from fastapi.responses import JSONResponse
 from fastapi import APIRouter
 from app.core.config import settings
 from app.core.database import check_database_health
@@ -17,7 +19,7 @@ def get_service_health():
         "status": "HEALTHY",
         "service": "Giftora API",
         "environment": settings.ENVIRONMENT,
-        "timestamp": datetime.utcnow().isoformat(),
+        "timestamp": datetime.now(timezone.utc).isoformat(),
         "version": "1.0.0",
     }
 
@@ -25,16 +27,16 @@ def get_service_health():
 @router.get("/health/database")
 def get_database_health():
     """Checks MySQL 8.0 connectivity and pool status."""
-    is_connected = check_database_health()
-    return {
+    health = check_database_health()
+    connected = bool(health.get("connected"))
+    payload = {
         "database": "MySQL 8.0",
         "database_name": settings.DB_NAME,
-        "host": settings.DB_HOST,
-        "port": settings.DB_PORT,
-        "connected": is_connected,
-        "status": "CONNECTED" if is_connected else "DISCONNECTED",
-        "timestamp": datetime.utcnow().isoformat(),
+        "connected": connected,
+        "status": "CONNECTED" if connected else "DISCONNECTED",
+        "timestamp": datetime.now(timezone.utc).isoformat(),
     }
+    return JSONResponse(payload, status_code=status.HTTP_200_OK if connected else status.HTTP_503_SERVICE_UNAVAILABLE)
 
 
 @router.get("/health/ai")
@@ -45,7 +47,7 @@ def get_ai_health():
         "model": settings.GEMINI_MODEL,
         "configured": ai_service.is_configured,
         "status": "CONFIGURED" if ai_service.is_configured else "NOT_CONFIGURED (Using Deterministic NLP Fallback)",
-        "timestamp": datetime.utcnow().isoformat(),
+        "timestamp": datetime.now(timezone.utc).isoformat(),
     }
 
 
@@ -58,5 +60,5 @@ def get_connectors_health():
 
     return {
         "connectors": [amazon, flipkart, myntra],
-        "timestamp": datetime.utcnow().isoformat(),
+        "timestamp": datetime.now(timezone.utc).isoformat(),
     }

@@ -125,6 +125,26 @@ class GiftoraApiClient {
     });
   }
 
+  async getSearchResults(searchId: string) {
+    return this.request<{
+      id: string;
+      original_query: string;
+      recommendations: Array<{
+        product_source_id: string;
+        product_title: string;
+        marketplace_name: string;
+        price: number;
+        original_price?: number | null;
+        image_url: string;
+        product_url: string;
+        rating?: number | null;
+        review_count?: number | null;
+        relevance_score: number;
+        match_explanation: string;
+      }>;
+    }>(`/api/v1/search/${encodeURIComponent(searchId)}`);
+  }
+
   // AI Chat Assistant
   async sendChatMessage(
     message: string,

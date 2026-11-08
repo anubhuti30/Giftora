@@ -1,6 +1,7 @@
 "use client";
 
-import React, { useState, useMemo } from "react";
+import React, { useState, useMemo, useEffect } from "react";
+import { useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { 
   Sparkles, 
@@ -17,9 +18,74 @@ import { CompareFloatingBar } from "@/components/products/CompareFloatingBar";
 import { MOCK_PRODUCTS } from "@/data/mockProducts";
 import { useGiftora } from "@/context/GiftoraContext";
 import { formatPriceINR } from "@/lib/utils";
+import { api } from "@/lib/api";
+import { Product } from "@/types";
+
+type SearchRecommendation = {
+  product_source_id: string;
+  product_title: string;
+  marketplace_name: string;
+  price: number;
+  original_price?: number | null;
+  image_url: string;
+  product_url: string;
+  rating?: number | null;
+  source_rating?: number | null;
+  review_count?: number | null;
+  source_review_count?: number | null;
+  relevance_score?: number;
+  final_score?: number;
+  match_explanation: string;
+  category?: string;
+};
+
+function toProducts(items: SearchRecommendation[]): Product[] {
+  return items.map((item): Product => ({
+    id: item.product_source_id,
+    title: item.product_title,
+    price: item.price,
+    originalPrice: item.original_price ?? undefined,
+    currency: "INR",
+    source: item.marketplace_name as Product["source"],
+    category: item.category || "Gifts",
+    rating: item.rating ?? item.source_rating ?? 0,
+    reviewCount: item.review_count ?? item.source_review_count ?? 0,
+    imageUrl: item.image_url,
+    aiMatchReason: item.match_explanation,
+    matchScore: item.relevance_score ?? item.final_score ?? 0,
+    tags: [], occasions: [], features: [], productUrl: item.product_url,
+    valueComparison: { pros: [], idealFor: "Based on your search", deliveryEstimate: "Not verified", sentimentRating: "Not available" },
+  }));
+}
 
 export default function DiscoverResultsPage() {
   const { activeSearch } = useGiftora();
+  const searchParams = useSearchParams();
+  const [apiProducts, setApiProducts] = useState<Product[] | null>(null);
+  const [loadError, setLoadError] = useState<string | null>(null);
+
+  useEffect(() => {
+    const searchId = searchParams.get("search_id");
+    if (!searchId) return;
+    let active = true;
+    api.getSearchResults(searchId)
+      .then((result) => {
+        if (!active) return;
+        setApiProducts(toProducts(result.recommendations));
+      })
+      .catch(() => {
+        try {
+          const cached = sessionStorage.getItem(`giftora_search_${searchId}`);
+          if (active && cached) {
+            setApiProducts(toProducts(JSON.parse(cached) as SearchRecommendation[]));
+            setLoadError("Showing this browser session's search results; the saved server copy is unavailable.");
+            return;
+          }
+        } catch {}
+        if (active) setLoadError("Saved search results could not be loaded. Showing local discovery examples instead.");
+      });
+    return () => { active = false; };
+  }, [searchParams]);
 
   // Filters & Sorting state
   const [selectedSource, setSelectedSource] = useState<string>("all");
@@ -33,7 +99,8 @@ export default function DiscoverResultsPage() {
 
   // Filter and sort products
   const filteredProducts = useMemo(() => {
-    return MOCK_PRODUCTS.filter((product) => {
+    const products = apiProducts ?? MOCK_PRODUCTS;
+    return products.filter((product) => {
       // Marketplace filter
       if (selectedSource !== "all" && product.source !== selectedSource) {
         return false;
@@ -62,7 +129,7 @@ export default function DiscoverResultsPage() {
       if (selectedSort === "rating") return b.rating - a.rating;
       return 0;
     });
-  }, [selectedSource, filterCategory, maxPrice, searchQuery, selectedSort]);
+  }, [apiProducts, selectedSource, filterCategory, maxPrice, searchQuery, selectedSort]);
 
   return (
     <div className="min-h-screen flex flex-col bg-[#F8F5F0]">
@@ -77,6 +144,7 @@ export default function DiscoverResultsPage() {
           
           {/* Breadcrumb & Context Header */}
           <div className="mb-6 space-y-3">
+            {loadError && <p role="status" className="rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-900">{loadError}</p>}
             <div className="flex items-center gap-2 text-xs text-[#8E8691]">
               <Link href="/discover" className="hover:text-[#422C42] flex items-center gap-1">
                 <ArrowLeft className="w-3.5 h-3.5" />

@@ -2,8 +2,6 @@
 
 import React, { createContext, useContext, useState, useEffect } from "react";
 import { Product, Recipient, SearchCriteria, UserProfile } from "@/types";
-import { MOCK_PRODUCTS } from "@/data/mockProducts";
-import { INITIAL_RECIPIENTS } from "@/data/mockRecipients";
 import { api } from "@/lib/api";
 
 interface GiftoraContextType {
@@ -53,21 +51,21 @@ export function GiftoraProvider({ children }: { children: React.ReactNode }) {
 
   // Hydrate client-side state from localStorage cleanly after mount (prevents SSR hydration mismatch)
   useEffect(() => {
-    try {
-      const savedWishlist = localStorage.getItem("giftora_wishlist");
-      if (savedWishlist) setWishlist(JSON.parse(savedWishlist));
-
-      const savedCompare = localStorage.getItem("giftora_compare");
-      if (savedCompare) setCompareList(JSON.parse(savedCompare));
-
-      const savedRecipients = localStorage.getItem("giftora_recipients");
-      if (savedRecipients) setRecipients(JSON.parse(savedRecipients));
-
-      const savedUser = localStorage.getItem("giftora_user");
-      if (savedUser) setUser(JSON.parse(savedUser));
-    } catch (e) {
-      console.error("Failed to load local storage state:", e);
-    }
+    const timer = window.setTimeout(() => {
+      try {
+        const savedWishlist = localStorage.getItem("giftora_wishlist");
+        if (savedWishlist) setWishlist(JSON.parse(savedWishlist));
+        const savedCompare = localStorage.getItem("giftora_compare");
+        if (savedCompare) setCompareList(JSON.parse(savedCompare));
+        const savedRecipients = localStorage.getItem("giftora_recipients");
+        if (savedRecipients) setRecipients(JSON.parse(savedRecipients));
+        const savedUser = localStorage.getItem("giftora_user");
+        if (savedUser) setUser(JSON.parse(savedUser));
+      } catch (e) {
+        console.error("Failed to load local storage state:", e);
+      }
+    }, 0);
+    return () => window.clearTimeout(timer);
   }, []);
 
   // Verify and sync genuine backend session on mount

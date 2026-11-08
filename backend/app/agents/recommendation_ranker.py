@@ -8,7 +8,7 @@ def rank_recommendations_node(state: AgentWorkflowState) -> Dict[str, Any]:
     Ranks verified product candidates using the deterministic 5-factor scoring engine:
     Interest (35%), Budget (25%), Quality (20%), Usefulness (10%), Value (10%).
     """
-    candidates = state.validated_products or state.normalized_products
+    candidates = state.validated_products
 
     if not candidates:
         return {"ranked_recommendations": []}
@@ -57,6 +57,8 @@ def rank_recommendations_node(state: AgentWorkflowState) -> Dict[str, Any]:
             "match_explanation": scored.match_explanation,
             "is_curated": orig.get("is_curated", True),
             "availability_status": orig.get("availability_status", "in_stock"),
+            "is_development_mock": bool(orig.get("is_development_mock", False)),
+            "source_attribution": orig.get("source_attribution", ""),
         })
 
     return {"ranked_recommendations": ranked_dicts}

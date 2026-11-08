@@ -19,8 +19,8 @@
     --border-strong: #D5C7D3;
     --card-surface: #FFFFFF;
     --card-ivory: #FCFAF7;
-    --font-serif: var(--font-playfair), "Playfair Display", Georgia, serif;
-    --font-sans: var(--font-jakarta), "Plus Jakarta Sans", system-ui, -apple-system, sans-serif;
+    --font-serif: Georgia, "Times New Roman", serif;
+    --font-sans: system-ui, -apple-system, "Segoe UI", sans-serif;
   }
 
   .dark {
@@ -64,8 +64,8 @@
   --color-border-strong: #D5C7D3;
   --color-surface-white: #FFFFFF;
   
-  --font-serif: var(--font-playfair), "Playfair Display", Georgia, serif;
-  --font-sans: var(--font-jakarta), "Plus Jakarta Sans", system-ui, -apple-system, sans-serif;
+  --font-serif: Georgia, "Times New Roman", serif;
+  --font-sans: system-ui, -apple-system, "Segoe UI", sans-serif;
 }
 
 body {

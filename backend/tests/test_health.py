@@ -22,10 +22,11 @@ def test_health_endpoint():
 
 def test_database_health_endpoint():
     response = client.get("/health/database")
-    assert response.status_code == 200
+    assert response.status_code in (200, 503)
     data = response.json()
     assert data["database"] == "MySQL 8.0"
     assert "connected" in data
+    assert data["status"] == ("CONNECTED" if data["connected"] else "DISCONNECTED")
 
 
 def test_ai_health_endpoint():

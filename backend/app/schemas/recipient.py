@@ -59,6 +59,9 @@ class RecipientCreate(BaseModel):
     date_of_birth: Optional[date] = None
     notes: Optional[str] = None
     interests: Optional[List[str]] = None
+    custom_attributes: Optional[dict] = None
+    disliked_gifts: Optional[List[str]] = None
+    ai_memory_enabled: bool = True
     gift_preference: Optional[GiftPreferenceCreate] = None
 
 
@@ -68,6 +71,9 @@ class RecipientUpdate(BaseModel):
     date_of_birth: Optional[date] = None
     notes: Optional[str] = None
     interests: Optional[List[str]] = None
+    custom_attributes: Optional[dict] = None
+    disliked_gifts: Optional[List[str]] = None
+    ai_memory_enabled: Optional[bool] = None
 
 
 class RecipientResponse(BaseModel):
@@ -77,6 +83,9 @@ class RecipientResponse(BaseModel):
     relationship: str = Field(..., serialization_alias="relationship")
     date_of_birth: Optional[date] = None
     notes: Optional[str] = None
+    custom_attributes: Optional[dict] = None
+    disliked_gifts: Optional[List[str]] = None
+    ai_memory_enabled: bool = True
     created_at: datetime
     updated_at: datetime
     interests: List[RecipientInterestResponse] = []
@@ -84,6 +93,22 @@ class RecipientResponse(BaseModel):
 
     class Config:
         from_attributes = True
+
+
+class NaturalLanguageRecipientRequest(BaseModel):
+    description: str = Field(..., min_length=5, max_length=2000)
+
+
+class NaturalLanguageRecipientResponse(BaseModel):
+    name: str
+    relationship: str
+    age_group: Optional[str] = None
+    interests: List[str] = Field(default_factory=list)
+    disliked_gifts: List[str] = Field(default_factory=list)
+    custom_attributes: dict = Field(default_factory=dict)
+    suggested_budget: Optional[dict] = None
+    notes: Optional[str] = None
+    ai_confidence: float = 0.95
 
 
 class OccasionCreate(BaseModel):

@@ -7,20 +7,29 @@ from app.core.config import settings
 
 logger = logging.getLogger("giftora.database")
 
-# Create SQLAlchemy Engine with connection pooling and pre-ping
+# Create SQLAlchemy Engine with dialect-aware connection pooling
+db_url = settings.database_url
+is_sqlite = db_url.startswith("sqlite")
+
 try:
-    engine = create_engine(
-        settings.database_url,
-        pool_size=settings.DB_POOL_SIZE,
-        max_overflow=settings.DB_MAX_OVERFLOW,
-        pool_timeout=settings.DB_POOL_TIMEOUT,
-        pool_recycle=settings.DB_POOL_RECYCLE,
-        pool_pre_ping=True,
-        echo=settings.DEBUG,
-    )
+    if is_sqlite:
+        engine = create_engine(
+            db_url,
+            connect_args={"check_same_thread": False},
+            echo=settings.DEBUG,
+        )
+    else:
+        engine = create_engine(
+            db_url,
+            pool_size=settings.DB_POOL_SIZE,
+            max_overflow=settings.DB_MAX_OVERFLOW,
+            pool_timeout=settings.DB_POOL_TIMEOUT,
+            pool_recycle=settings.DB_POOL_RECYCLE,
+            pool_pre_ping=True,
+            echo=settings.DEBUG,
+        )
 except Exception as e:
     logger.error(f"Failed to create database engine: {e}")
-    # Create dummy engine object or raise
     raise
 
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
@@ -45,25 +54,22 @@ def get_db() -> Generator[Session, None, None]:
 
 def check_database_health() -> dict:
     """
-    Health check function to verify live connection to MySQL.
-    Returns status, latency/version info, or error description.
+    Universal health check function compatible with MySQL, PostgreSQL, and SQLite.
     """
     try:
         with engine.connect() as conn:
-            result = conn.execute(text("SELECT VERSION() as version, DATABASE() as current_db;"))
-            row = result.mappings().first()
+            conn.execute(text("SELECT 1;"))
             return {
                 "status": "healthy",
                 "connected": True,
-                "version": row["version"] if row else "unknown",
-                "database": row["current_db"] if row else settings.DB_NAME,
+                "database_dialect": engine.dialect.name,
             }
     except OperationalError as oe:
         logger.warning(f"Database operational error: {oe}")
         return {
             "status": "unhealthy",
             "connected": False,
-            "error": "Cannot connect to MySQL server. Check service status and credentials.",
+            "error": "Cannot connect to database server. Check service status and credentials.",
             "details": str(oe),
         }
     except SQLAlchemyError as se:

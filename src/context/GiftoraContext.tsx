@@ -33,59 +33,42 @@ interface GiftoraContextType {
 }
 
 const defaultSearchCriteria: SearchCriteria = {
-  recipientName: "Pooja",
-  relationship: "Sister",
-  occasion: "Birthday",
-  interests: ["Aromatherapy", "Ceramics", "Minimalist Fashion"],
-  budgetRange: { min: 500, max: 2500 },
-  query: "Something thoughtful and warm for quiet creative evenings",
-  age: "26-30",
+  recipientName: "",
+  relationship: "",
+  occasion: "",
+  interests: [],
+  budgetRange: { min: 1000, max: 5000 },
+  query: "",
+  age: "",
 };
 
 const GiftoraContext = createContext<GiftoraContextType | undefined>(undefined);
 
 export function GiftoraProvider({ children }: { children: React.ReactNode }) {
-  const [wishlist, setWishlist] = useState<Product[]>(() => {
-    if (typeof window !== "undefined") {
-      try {
-        const saved = localStorage.getItem("giftora_wishlist");
-        if (saved) return JSON.parse(saved);
-      } catch {}
-    }
-    return [MOCK_PRODUCTS[0], MOCK_PRODUCTS[3]];
-  });
-
-  const [compareList, setCompareList] = useState<Product[]>(() => {
-    if (typeof window !== "undefined") {
-      try {
-        const saved = localStorage.getItem("giftora_compare");
-        if (saved) return JSON.parse(saved);
-      } catch {}
-    }
-    return [];
-  });
-
-  const [recipients, setRecipients] = useState<Recipient[]>(() => {
-    if (typeof window !== "undefined") {
-      try {
-        const saved = localStorage.getItem("giftora_recipients");
-        if (saved) return JSON.parse(saved);
-      } catch {}
-    }
-    return INITIAL_RECIPIENTS;
-  });
-
+  const [wishlist, setWishlist] = useState<Product[]>([]);
+  const [compareList, setCompareList] = useState<Product[]>([]);
+  const [recipients, setRecipients] = useState<Recipient[]>([]);
   const [activeSearch, setActiveSearch] = useState<SearchCriteria>(defaultSearchCriteria);
+  const [user, setUser] = useState<UserProfile | null>(null);
 
-  const [user, setUser] = useState<UserProfile | null>(() => {
-    if (typeof window !== "undefined") {
-      try {
-        const saved = localStorage.getItem("giftora_user");
-        if (saved) return JSON.parse(saved);
-      } catch {}
+  // Hydrate client-side state from localStorage cleanly after mount (prevents SSR hydration mismatch)
+  useEffect(() => {
+    try {
+      const savedWishlist = localStorage.getItem("giftora_wishlist");
+      if (savedWishlist) setWishlist(JSON.parse(savedWishlist));
+
+      const savedCompare = localStorage.getItem("giftora_compare");
+      if (savedCompare) setCompareList(JSON.parse(savedCompare));
+
+      const savedRecipients = localStorage.getItem("giftora_recipients");
+      if (savedRecipients) setRecipients(JSON.parse(savedRecipients));
+
+      const savedUser = localStorage.getItem("giftora_user");
+      if (savedUser) setUser(JSON.parse(savedUser));
+    } catch (e) {
+      console.error("Failed to load local storage state:", e);
     }
-    return null;
-  });
+  }, []);
 
   // Verify and sync genuine backend session on mount
   useEffect(() => {

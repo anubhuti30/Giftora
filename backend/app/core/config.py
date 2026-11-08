@@ -1,6 +1,8 @@
 import os
-from typing import List, Union
-from pydantic import AnyHttpUrl, field_validator
+import json
+import urllib.parse
+from typing import List, Optional, Union
+from pydantic import field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -9,12 +11,14 @@ class Settings(BaseSettings):
     DEBUG: bool = True
     PORT: int = 8000
     HOST: str = "0.0.0.0"
-    CORS_ORIGINS: List[str] = [
+
+    CORS_ORIGINS: Union[List[str], str] = [
         "http://localhost:3000",
         "http://127.0.0.1:3000",
     ]
 
     # Database
+    DATABASE_URL: Optional[str] = None
     DB_HOST: str = "localhost"
     DB_PORT: int = 3306
     DB_NAME: str = "giftora_db"
@@ -51,11 +55,34 @@ class Settings(BaseSettings):
         extra="ignore",
     )
 
+    @field_validator("CORS_ORIGINS", mode="before")
+    @classmethod
+    def assemble_cors_origins(cls, v: Union[str, List[str]]) -> List[str]:
+        if isinstance(v, str):
+            v = v.strip()
+            if v.startswith("[") and v.endswith("]"):
+                try:
+                    return json.loads(v)
+                except Exception:
+                    pass
+            return [i.strip() for i in v.split(",") if i.strip()]
+        elif isinstance(v, list):
+            return v
+        return ["http://localhost:3000", "http://127.0.0.1:3000"]
+
     @property
     def database_url(self) -> str:
-        # Construct SQLAlchemy PyMySQL URL
-        # password is properly URL-encoded if needed
-        import urllib.parse
+        # If DATABASE_URL is explicitly set (e.g. Render, Railway, Supabase, Neon)
+        if self.DATABASE_URL:
+            url = self.DATABASE_URL.strip()
+            # Fix legacy postgres:// prefix for SQLAlchemy 2.0
+            if url.startswith("postgres://"):
+                url = url.replace("postgres://", "postgresql+psycopg2://", 1)
+            elif url.startswith("postgresql://") and not url.startswith("postgresql+"):
+                url = url.replace("postgresql://", "postgresql+psycopg2://", 1)
+            return url
+
+        # Otherwise construct PyMySQL URL from individual environment variables
         encoded_password = urllib.parse.quote_plus(self.DB_PASSWORD)
         return f"mysql+pymysql://{self.DB_USER}:{encoded_password}@{self.DB_HOST}:{self.DB_PORT}/{self.DB_NAME}?charset=utf8mb4"
 

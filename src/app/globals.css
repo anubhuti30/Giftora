@@ -22,6 +22,26 @@
     --font-serif: var(--font-playfair), "Playfair Display", Georgia, serif;
     --font-sans: var(--font-jakarta), "Plus Jakarta Sans", system-ui, -apple-system, sans-serif;
   }
+
+  .dark {
+    --bg-ivory: #1E1620;
+    --bg-ivory-warm: #181119;
+    --bg-blush: #36273B;
+    --bg-blush-light: #2A1D2E;
+    --accent-mauve: #C48EAE;
+    --accent-mauve-dark: #9B668B;
+    --accent-mauve-light: #3A293E;
+    --accent-plum: #F2E8F0;
+    --accent-plum-dark: #FAF6F8;
+    --accent-plum-light: #BCA4B7;
+    --text-charcoal: #FAF6F8;
+    --text-muted: #C4B5C3;
+    --text-subtle: #9E8E9D;
+    --border-subtle: #36273B;
+    --border-strong: #4E3854;
+    --card-surface: #271C2B;
+    --card-ivory: #221826;
+  }
 }
 
 @theme {

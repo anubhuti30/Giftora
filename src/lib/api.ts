@@ -4,7 +4,8 @@
  * Gracefully handles offline backend with fallback responses.
  */
 
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
+const rawBaseUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
+const API_BASE_URL = rawBaseUrl.replace(/\/+$/, "");
 
 class GiftoraApiClient {
   private token: string | null = null;

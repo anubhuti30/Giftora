@@ -14,6 +14,9 @@ class Recipient(Base):
     relationship_type = Column("relationship", String(100), nullable=False)
     date_of_birth = Column(Date, nullable=True)
     notes = Column(Text, nullable=True)
+    custom_attributes = Column(JSON, nullable=True)
+    disliked_gifts = Column(JSON, nullable=True)
+    ai_memory_enabled = Column(Boolean, default=True, nullable=False)
     created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False)
 

@@ -8,7 +8,8 @@ import {
   ArrowRight, 
   User, 
   Check, 
-  RotateCcw
+  RotateCcw,
+  Loader2
 } from "lucide-react";
 import { Navbar } from "@/components/layout/Navbar";
 import { AppSidebar } from "@/components/layout/AppSidebar";
@@ -17,6 +18,7 @@ import { useGiftora } from "@/context/GiftoraContext";
 import { BUDGET_TIERS } from "@/data/mockProducts";
 import { POPULAR_INTEREST_TAGS } from "@/data/mockRecipients";
 import { ChatMessage } from "@/types";
+import { api } from "@/lib/api";
 
 function DiscoverContent() {
   const router = useRouter();
@@ -68,7 +70,10 @@ function DiscoverContent() {
 
   const [inputMessage, setInputMessage] = useState(promptParam || "");
   const [isThinking, setIsThinking] = useState(false);
-  const [selectedRecipient, setSelectedRecipient] = useState(recipientParam || activeSearch.recipientName || "Pooja");
+  const [isSearching, setIsSearching] = useState(false);
+  const [conversationId, setConversationId] = useState<string | null>(null);
+
+  const [selectedRecipient, setSelectedRecipient] = useState(recipientParam || activeSearch.recipientName || "Sister");
   const [selectedOccasion, setSelectedOccasion] = useState(occasionParam || activeSearch.occasion || "Birthday");
   const [selectedInterests, setSelectedInterests] = useState<string[]>(activeSearch.interests || ["Ceramics & Pottery", "Aromatherapy & Candles"]);
   const [selectedBudget, setSelectedBudget] = useState(activeSearch.budgetRange || { min: 500, max: 2500 });
@@ -80,7 +85,7 @@ function DiscoverContent() {
     chatEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages, isThinking]);
 
-  const handleUserSendMessage = useCallback((customText?: string) => {
+  const handleUserSendMessage = useCallback(async (customText?: string) => {
     const textToSend = customText || inputMessage;
     if (!textToSend.trim()) return;
 
@@ -95,48 +100,93 @@ function DiscoverContent() {
     setInputMessage("");
     setIsThinking(true);
 
-    // Contextual AI simulation
-    setTimeout(() => {
-      setIsThinking(false);
+    try {
+      // Build history for multi-turn conversational context
+      const history = messages.slice(-6).map((m) => ({
+        role: m.sender === "user" ? "user" : "assistant",
+        content: m.text,
+      }));
+      history.push({ role: "user", content: textToSend });
 
-      setMessages((prev) => {
-        if (prev.length <= 2) {
-          return [
-            ...prev,
-            {
-              id: `ai-${Date.now()}`,
-              sender: "assistant",
-              text: `Lovely! What are some of their cherished hobbies, aesthetics, or current interests? Select from the curated tags below or tell me in your own words.`,
-              timestamp: "Just now",
-              step: "interests",
-            },
-          ];
-        } else if (prev.length <= 4) {
-          return [
-            ...prev,
-            {
-              id: `ai-${Date.now()}`,
-              sender: "assistant",
-              text: `Wonderful taste. What price range feels right for this celebration? I'll discover options from verified artisans and reputable retailers.`,
-              timestamp: "Just now",
-              step: "budget",
-            },
-          ];
-        } else {
-          return [
-            ...prev,
-            {
-              id: `ai-${Date.now()}`,
-              sender: "assistant",
-              text: `I've synthesized your inputs! Based on their passions and your budget, I've curated a personalized collection of matched gifts with tailored compatibility insights.`,
-              timestamp: "Just now",
-              step: "complete",
-            },
-          ];
+      const res = await api.sendChatMessage(
+        textToSend,
+        conversationId || undefined,
+        undefined,
+        history
+      );
+
+      if (res.conversation_id) {
+        setConversationId(res.conversation_id);
+      }
+
+      // Synchronize extracted profiling back into active search and UI state
+      if (res.extracted_needs) {
+        const needs = res.extracted_needs as {
+          recipient_name?: string;
+          relationship?: string;
+          occasion?: string;
+          interests?: string[];
+          minimum_budget?: number;
+          maximum_budget?: number;
+        };
+
+        if (needs.relationship) {
+          setSelectedRecipient(needs.relationship);
+        } else if (needs.recipient_name) {
+          setSelectedRecipient(needs.recipient_name);
         }
-      });
-    }, 850);
-  }, [inputMessage]);
+
+        if (needs.occasion) {
+          setSelectedOccasion(needs.occasion);
+        }
+
+        if (Array.isArray(needs.interests) && needs.interests.length > 0) {
+          setSelectedInterests((prev) => {
+            const combined = Array.from(new Set([...prev, ...needs.interests!]));
+            return combined;
+          });
+        }
+
+        if (typeof needs.minimum_budget === "number" || typeof needs.maximum_budget === "number") {
+          setSelectedBudget((prev) => ({
+            min: typeof needs.minimum_budget === "number" ? needs.minimum_budget : prev.min,
+            max: typeof needs.maximum_budget === "number" ? needs.maximum_budget : prev.max,
+          }));
+        }
+      }
+
+      const replyText =
+        res.reply_message?.message_content ||
+        "I've noted that! What other specific details or aesthetics would they love?";
+
+      const quickReplies = res.suggested_quick_replies || [];
+
+      setMessages((prev) => [
+        ...prev,
+        {
+          id: res.reply_message?.id || `ai-${Date.now()}`,
+          sender: "assistant",
+          text: replyText,
+          timestamp: "Just now",
+          quickReplies: quickReplies.length > 0 ? quickReplies : undefined,
+        },
+      ]);
+    } catch (err: unknown) {
+      console.warn("Real chat endpoint fallback:", err);
+      setMessages((prev) => [
+        ...prev,
+        {
+          id: `ai-${Date.now()}`,
+          sender: "assistant",
+          text: "I've noted that! Select from the curated options below or tell me about their personal style to refine recommendations.",
+          timestamp: "Just now",
+          quickReplies: ["Under ₹1,500", "Under ₹3,000", "Handmade & Artisanal", "Minimalist Modern"],
+        },
+      ]);
+    } finally {
+      setIsThinking(false);
+    }
+  }, [inputMessage, messages, conversationId]);
 
   const toggleInterest = (tag: string) => {
     setSelectedInterests((prev) =>
@@ -144,17 +194,40 @@ function DiscoverContent() {
     );
   };
 
-  const handleLaunchResults = () => {
-    updateSearchCriteria({
+  const handleLaunchResults = async () => {
+    setIsSearching(true);
+    const searchPayload = {
       recipientName: selectedRecipient,
       relationship: selectedRecipient,
       occasion: selectedOccasion,
       interests: selectedInterests,
       budgetRange: selectedBudget,
       age: recipientAge,
-      query: inputMessage || `Gifts for ${selectedRecipient}`,
-    });
-    router.push("/discover/results");
+      query: inputMessage || `Gifts for ${selectedRecipient} on ${selectedOccasion}`,
+    };
+    updateSearchCriteria(searchPayload);
+
+    try {
+      const res = await api.searchGifts({
+        recipient_name: selectedRecipient,
+        relationship: selectedRecipient,
+        occasion: selectedOccasion,
+        interests: selectedInterests,
+        minimum_budget: selectedBudget.min,
+        maximum_budget: selectedBudget.max,
+        query: searchPayload.query,
+      });
+
+      if (res?.search_id) {
+        router.push(`/discover/results?search_id=${res.search_id}`);
+      } else {
+        router.push("/discover/results");
+      }
+    } catch {
+      router.push("/discover/results");
+    } finally {
+      setIsSearching(false);
+    }
   };
 
   return (
@@ -272,6 +345,22 @@ function DiscoverContent() {
                       {msg.timestamp}
                     </span>
                   </div>
+
+                  {/* Quick Reply Pills */}
+                  {msg.quickReplies && msg.quickReplies.length > 0 && (
+                    <div className="flex flex-wrap gap-1.5 pt-1">
+                      {msg.quickReplies.map((qr) => (
+                        <button
+                          key={qr}
+                          type="button"
+                          onClick={() => handleUserSendMessage(qr)}
+                          className="px-3 py-1.5 rounded-full text-xs font-medium bg-white hover:bg-[#FAF8F5] text-[#422C42] border border-[#E6DDE5] shadow-2xs hover:border-[#9B668B] transition-all text-left"
+                        >
+                          {qr}
+                        </button>
+                      ))}
+                    </div>
+                  )}
 
                   {/* Interactive Progressive Disclosure Controls */}
                   {msg.sender === "assistant" && (
@@ -416,10 +505,20 @@ function DiscoverContent() {
                         <button
                           type="button"
                           onClick={handleLaunchResults}
-                          className="inline-flex items-center gap-2 bg-[#422C42] hover:bg-[#9B668B] text-white px-5 py-2.5 rounded-xl text-xs font-semibold shadow-soft transition-all active:scale-95"
+                          disabled={isSearching}
+                          className="inline-flex items-center gap-2 bg-[#422C42] hover:bg-[#9B668B] disabled:opacity-75 text-white px-5 py-2.5 rounded-xl text-xs font-semibold shadow-soft transition-all active:scale-95"
                         >
-                          <span>Discover Matched Gifts</span>
-                          <ArrowRight className="w-3.5 h-3.5" />
+                          {isSearching ? (
+                            <>
+                              <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                              <span>Searching Marketplaces...</span>
+                            </>
+                          ) : (
+                            <>
+                              <span>Discover Matched Gifts</span>
+                              <ArrowRight className="w-3.5 h-3.5" />
+                            </>
+                          )}
                         </button>
                       </div>
 

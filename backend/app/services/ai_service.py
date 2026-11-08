@@ -54,6 +54,12 @@ class GeminiAIService:
             # Clear error reporting according to requirements
             return self._heuristic_extraction(user_query)
 
+        history_context = ""
+        if chat_history:
+            history_context = "Conversation history:\n" + "\n".join(
+                f"- {h.get('role', 'user')}: {h.get('content', '')}" for h in chat_history[-6:]
+            ) + "\n\n"
+
         prompt = f"""
 You are Giftora's Senior AI Gifting Curator.
 Analyze the following user input and optional conversation history.
@@ -63,7 +69,7 @@ If critical information is missing to make a thoughtful recommendation, formulat
 
 IMPORTANT: Do NOT invent product titles, prices, ratings, discounts, or purchase URLs. Only extract recipient requirements and search keywords.
 
-User Input: "{user_query}"
+{history_context}Current User Input: "{user_query}"
 
 Respond strictly with valid JSON conforming to this schema:
 {{

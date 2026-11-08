@@ -35,6 +35,7 @@ export interface Product {
   productUrl: string;
   valueComparison: ProductValueComparison;
   isCuratedFavorite?: boolean;
+  isDemo?: boolean;
 }
 
 export interface Recipient {

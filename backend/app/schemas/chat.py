@@ -7,6 +7,7 @@ class ChatRequest(BaseModel):
     conversation_id: Optional[str] = None
     recipient_id: Optional[str] = None
     message: str = Field(..., min_length=1)
+    chat_history: Optional[List[Dict[str, str]]] = None
     context_data: Optional[Dict[str, Any]] = None
 
 

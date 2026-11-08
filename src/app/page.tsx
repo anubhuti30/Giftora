@@ -41,23 +41,88 @@ export default function HomePage() {
     router.push(`/discover?prompt=${encodeURIComponent(heroPrompt)}`);
   };
 
+  const recipientsList = [
+    {
+      id: "mother",
+      name: "Mother",
+      subtitle: "Comfort & Grace",
+      image: "/images/categories/beauty.jpg",
+      giftCount: "85+ Gifts",
+      badge: "Pampering",
+    },
+    {
+      id: "father",
+      name: "Father",
+      subtitle: "Gourmet & Craft",
+      image: "/images/categories/gourmet.jpg",
+      giftCount: "70+ Gifts",
+      badge: "Appreciation",
+    },
+    {
+      id: "sister",
+      name: "Sister",
+      subtitle: "Style & Scents",
+      image: "/images/categories/fashion.jpg",
+      giftCount: "90+ Gifts",
+      badge: "Cherished",
+    },
+    {
+      id: "brother",
+      name: "Brother",
+      subtitle: "Everyday Tech",
+      image: "/images/categories/technology.jpg",
+      giftCount: "65+ Gifts",
+      badge: "Modern",
+    },
+    {
+      id: "partner",
+      name: "Partner",
+      subtitle: "Romantic Keepsakes",
+      image: "/images/hero/luxury_gift_hero.jpg",
+      giftCount: "110+ Gifts",
+      badge: "Soulmate",
+    },
+    {
+      id: "best-friend",
+      name: "Best Friend",
+      subtitle: "Fun & Meaningful",
+      image: "/images/categories/home_living.jpg",
+      giftCount: "95+ Gifts",
+      badge: "Laughter",
+    },
+    {
+      id: "colleague",
+      name: "Colleague",
+      subtitle: "Polished & Useful",
+      image: "/images/categories/stationery.jpg",
+      giftCount: "60+ Gifts",
+      badge: "Gratitude",
+    },
+  ];
+
   const collectionCategories = [
     { id: "under-500", label: "Gifts Under ₹500" },
-    { id: "for-her", label: "Thoughtful for Her" },
-    { id: "tech-lovers", label: "Tech Lovers" },
-    { id: "unique", label: "Unique Keepsakes" },
+    { id: "luxury", label: "Thoughtful Luxury" },
+    { id: "tech", label: "Minimalist Tech Gifts" },
+    { id: "wellness", label: "Self-Care & Wellness" },
+    { id: "handmade", label: "Handmade with Love" },
+    { id: "personalized", label: "Personalized Gifts" },
   ];
 
   const getFilteredCollectionProducts = () => {
     switch (activeCollectionTab) {
       case "under-500":
         return MOCK_PRODUCTS.filter((p) => p.tags.includes("Under ₹500")).slice(0, 4);
-      case "for-her":
-        return MOCK_PRODUCTS.filter((p) => p.tags.includes("Thoughtful for Her")).slice(0, 4);
-      case "tech-lovers":
-        return MOCK_PRODUCTS.filter((p) => p.tags.includes("Tech Lovers")).slice(0, 4);
-      case "unique":
-        return MOCK_PRODUCTS.filter((p) => p.tags.includes("Unique for Special")).slice(0, 4);
+      case "luxury":
+        return MOCK_PRODUCTS.filter((p) => p.price >= 3500 || p.tags.includes("Luxury") || p.source === "Tata CLiQ Luxury").slice(0, 4);
+      case "tech":
+        return MOCK_PRODUCTS.filter((p) => p.tags.includes("Tech Lovers") || p.category === "Technology" || p.category === "Audio").slice(0, 4);
+      case "wellness":
+        return MOCK_PRODUCTS.filter((p) => p.tags.includes("Wellness") || p.tags.includes("Self-Care") || p.category === "Ayurvedic Luxury").slice(0, 4);
+      case "handmade":
+        return MOCK_PRODUCTS.filter((p) => p.tags.includes("Handmade") || p.tags.includes("Artisan") || p.source === "Etsy" || p.source === "Fabindia").slice(0, 4);
+      case "personalized":
+        return MOCK_PRODUCTS.filter((p) => p.tags.includes("Personalized") || p.tags.includes("Unique for Special") || p.category === "Custom & Keepsake").slice(0, 4);
       default:
         return MOCK_PRODUCTS.slice(0, 4);
     }
@@ -151,11 +216,28 @@ export default function HomePage() {
 
                 <div className="space-y-3">
                   <h1 className="font-serif text-4xl sm:text-5xl lg:text-6xl font-bold tracking-tight text-[#422C42] leading-[1.12]">
-                    Find something they&apos;ll <span className="italic font-normal text-[#B77B9F]">absolutely love.</span>
+                    Make Every Gift Feel <span className="italic font-normal text-[#B77B9F]">Personal.</span>
                   </h1>
                   <p className="text-base sm:text-lg text-[#6E6770] leading-relaxed max-w-lg">
                     Tell us a little about them. We&apos;ll find the gift that feels just right.
                   </p>
+                </div>
+
+                {/* Primary & Secondary Hero CTAs */}
+                <div className="flex flex-wrap items-center gap-3">
+                  <Link
+                    href="/discover"
+                    className="inline-flex items-center gap-2 bg-[#422C42] hover:bg-[#9B668B] text-white px-6 py-3 rounded-2xl text-xs sm:text-sm font-semibold shadow-soft transition-all active:scale-95"
+                  >
+                    <span>Discover the Perfect Gift</span>
+                    <ArrowRight className="w-4 h-4" />
+                  </Link>
+                  <a
+                    href="#collections"
+                    className="inline-flex items-center gap-2 bg-white hover:bg-[#FAF8F5] text-[#422C42] border border-[#E6DDE5] px-5 py-3 rounded-2xl text-xs sm:text-sm font-semibold shadow-2xs hover:border-[#9B668B] transition-all"
+                  >
+                    <span>Explore Gift Collections</span>
+                  </a>
                 </div>
 
                 {/* Interactive Search Bar Form */}
@@ -431,6 +513,79 @@ export default function HomePage() {
               ))}
 
             </div>
+          </div>
+        </section>
+
+        {/* ========================================================
+            EXPLORE BY RECIPIENT (VISUAL EDITORIAL CARDS)
+            ======================================================== */}
+        <section id="recipients" className="py-16 md:py-20 bg-white border-b border-[#E6DDE5]">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            
+            {/* Section Header */}
+            <div className="flex flex-col sm:flex-row sm:items-end justify-between mb-10 gap-3">
+              <div>
+                <span className="text-xs uppercase tracking-widest font-bold text-[#B77B9F]">
+                  Meaningful Bonds
+                </span>
+                <h2 className="font-serif text-3xl sm:text-4xl font-bold text-[#422C42] mt-1">
+                  Explore by Recipient
+                </h2>
+                <p className="text-xs sm:text-sm text-[#6E6770] mt-1">
+                  Personalized curations honoring their unique personality and place in your heart.
+                </p>
+              </div>
+              <Link
+                href="/recipients"
+                className="inline-flex items-center gap-1.5 text-xs font-semibold text-[#422C42] hover:text-[#B77B9F] transition-colors self-start sm:self-auto"
+              >
+                <span>View All Saved Profiles</span>
+                <ArrowRight className="w-3.5 h-3.5" />
+              </Link>
+            </div>
+
+            {/* Recipient Cards Grid */}
+            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-7 gap-3.5 sm:gap-4">
+              {recipientsList.map((rec) => (
+                <div
+                  key={rec.id}
+                  onClick={() => {
+                    updateSearchCriteria({ recipientName: rec.name, relationship: rec.name });
+                    router.push(`/discover?recipient=${encodeURIComponent(rec.name)}`);
+                  }}
+                  className="group relative aspect-[3/4] rounded-2xl overflow-hidden cursor-pointer shadow-soft hover:shadow-card hover:-translate-y-1 transition-all duration-300 border border-[#E6DDE5]"
+                >
+                  <SafeImage
+                    src={rec.image}
+                    alt={rec.name}
+                    fill
+                    className="object-cover group-hover:scale-105 transition-transform duration-500"
+                  />
+                  <div className="absolute inset-0 bg-gradient-to-t from-[#422C42]/90 via-[#422C42]/30 to-transparent" />
+                  
+                  {/* Badge */}
+                  <div className="absolute top-2.5 left-2.5">
+                    <span className="text-[9px] font-bold px-2 py-0.5 rounded-full bg-white/90 text-[#422C42] shadow-2xs">
+                      {rec.badge}
+                    </span>
+                  </div>
+
+                  {/* Text Overlay */}
+                  <div className="absolute bottom-3 left-3 right-3 text-white">
+                    <span className="text-[9px] font-medium text-[#EAD9E5] uppercase tracking-wider block">
+                      {rec.giftCount}
+                    </span>
+                    <h3 className="font-serif text-base sm:text-lg font-bold leading-tight mt-0.5 group-hover:text-[#EAD9E5] transition-colors">
+                      {rec.name}
+                    </h3>
+                    <p className="text-[10px] text-[#FAF8F5]/80 line-clamp-1 mt-0.5">
+                      {rec.subtitle}
+                    </p>
+                  </div>
+                </div>
+              ))}
+            </div>
+
           </div>
         </section>
 

@@ -3,12 +3,12 @@
 import React, { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { Sparkles, Eye, EyeOff, ArrowRight, CheckCircle2 } from "lucide-react";
+import { Sparkles, Eye, EyeOff, ArrowRight, CheckCircle2, ShieldCheck } from "lucide-react";
 import { useGiftora } from "@/context/GiftoraContext";
 
 export default function SignupPage() {
   const router = useRouter();
-  const { loginUser } = useGiftora();
+  const { signupUser } = useGiftora();
 
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
@@ -19,8 +19,9 @@ export default function SignupPage() {
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  const [googleOauthNotice, setGoogleOauthNotice] = useState(false);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
 
@@ -50,14 +51,18 @@ export default function SignupPage() {
     }
 
     setIsLoading(true);
-    setTimeout(() => {
-      loginUser(email, name);
+    try {
+      await signupUser(name.trim(), email.trim(), password);
       setIsLoading(false);
       setSuccess(true);
       setTimeout(() => {
         router.push("/discover");
       }, 1200);
-    }, 600);
+    } catch (err: unknown) {
+      setIsLoading(false);
+      const msg = err instanceof Error ? err.message : "Account registration failed. Please try again.";
+      setError(msg);
+    }
   };
 
   return (
@@ -103,14 +108,11 @@ export default function SignupPage() {
                 </div>
               )}
 
-              {/* Google Signup UI Placeholder */}
+              {/* Google Signup Button */}
               <div>
                 <button
                   type="button"
-                  onClick={() => {
-                    loginUser("google.new@giftora.com", "Google User");
-                    router.push("/discover");
-                  }}
+                  onClick={() => setGoogleOauthNotice(true)}
                   className="w-full flex items-center justify-center gap-3 py-3 px-4 rounded-xl border border-[#E6DDE5] hover:bg-[#FAF8F5] text-xs font-semibold text-[#29252A] transition-all"
                 >
                   <svg className="w-4 h-4 shrink-0" viewBox="0 0 24 24">
@@ -132,14 +134,40 @@ export default function SignupPage() {
                     />
                   </svg>
                   <span>Sign up with Google</span>
-                  <span className="text-[10px] text-[#9B668B] bg-[#F2E8F0] px-2 py-0.5 rounded-full font-medium ml-1">
-                    UI Placeholder
-                  </span>
                 </button>
                 <p className="text-[10px] text-center text-[#8E8691] mt-1.5">
-                  UI integration placeholder — ready for Supabase Auth configuration
+                  Single sign-on using your existing Google account
                 </p>
               </div>
+
+              {/* Google OAuth Modal */}
+              {googleOauthNotice && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm p-4">
+                  <div className="bg-white rounded-3xl p-6 sm:p-8 max-w-md w-full shadow-2xl border border-[#E6DDE5] space-y-4">
+                    <div className="w-12 h-12 rounded-2xl bg-[#F2E8F0] text-[#9B668B] flex items-center justify-center mx-auto">
+                      <ShieldCheck className="w-6 h-6" />
+                    </div>
+                    <div className="text-center space-y-2">
+                      <h3 className="font-serif text-lg font-bold text-[#422C42]">
+                        Google Single Sign-On Setup
+                      </h3>
+                      <p className="text-xs text-[#6E6770] leading-relaxed">
+                        Google OAuth client credentials are configured in production via <code className="bg-[#FAF8F5] px-1.5 py-0.5 rounded text-[11px] font-mono text-[#422C42]">GOOGLE_CLIENT_ID</code>.
+                      </p>
+                      <p className="text-xs text-[#6E6770] leading-relaxed">
+                        To sign up immediately, please fill in your name, email and password below.
+                      </p>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => setGoogleOauthNotice(false)}
+                      className="w-full py-2.5 px-4 rounded-xl bg-[#422C42] text-white text-xs font-semibold hover:bg-[#9B668B] transition-colors"
+                    >
+                      Continue with Email Registration
+                    </button>
+                  </div>
+                </div>
+              )}
 
               <div className="relative">
                 <div className="absolute inset-0 flex items-center">

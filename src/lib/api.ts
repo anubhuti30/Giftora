@@ -65,16 +65,16 @@ class GiftoraApiClient {
   }
 
   // Auth
-  async login(formData: FormData | URLSearchParams) {
-    const response = await fetch(`${API_BASE_URL}/api/v1/auth/login`, {
+  async login(credentials: { email: string; password: string }) {
+    const data = await this.request<{
+      access_token: string;
+      refresh_token: string;
+      token_type: string;
+      expires_in: number;
+    }>("/api/v1/auth/login", {
       method: "POST",
-      body: formData,
+      body: JSON.stringify(credentials),
     });
-    if (!response.ok) {
-      const err = await response.json().catch(() => ({ detail: "Login failed" }));
-      throw new Error(err.detail || "Authentication error");
-    }
-    const data = await response.json();
     if (data.access_token) {
       this.setToken(data.access_token);
     }
@@ -82,10 +82,19 @@ class GiftoraApiClient {
   }
 
   async register(userData: { email: string; password: string; full_name: string; preferred_currency?: string }) {
-    return this.request<{ id: string; email: string; full_name: string }>("/api/v1/auth/register", {
+    const data = await this.request<{
+      access_token: string;
+      refresh_token: string;
+      token_type: string;
+      expires_in: number;
+    }>("/api/v1/auth/register", {
       method: "POST",
       body: JSON.stringify(userData),
     });
+    if (data.access_token) {
+      this.setToken(data.access_token);
+    }
+    return data;
   }
 
   async getMe() {
@@ -116,7 +125,12 @@ class GiftoraApiClient {
   }
 
   // AI Chat Assistant
-  async sendChatMessage(message: string, conversationId?: string, recipientId?: string) {
+  async sendChatMessage(
+    message: string,
+    conversationId?: string,
+    recipientId?: string,
+    chatHistory?: { role: string; content: string }[]
+  ) {
     return this.request<{
       conversation_id: string;
       reply_message: {
@@ -128,12 +142,14 @@ class GiftoraApiClient {
       };
       extracted_needs?: Record<string, unknown>;
       suggested_quick_replies?: string[];
+      recommended_search_id?: string;
     }>("/api/v1/chat", {
       method: "POST",
       body: JSON.stringify({
         message,
         conversation_id: conversationId,
         recipient_id: recipientId,
+        chat_history: chatHistory,
       }),
     });
   }

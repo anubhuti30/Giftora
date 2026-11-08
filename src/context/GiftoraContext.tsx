@@ -1,9 +1,10 @@
 "use client";
 
-import React, { createContext, useContext, useState } from "react";
+import React, { createContext, useContext, useState, useEffect } from "react";
 import { Product, Recipient, SearchCriteria, UserProfile } from "@/types";
 import { MOCK_PRODUCTS } from "@/data/mockProducts";
 import { INITIAL_RECIPIENTS } from "@/data/mockRecipients";
+import { api } from "@/lib/api";
 
 interface GiftoraContextType {
   wishlist: Product[];
@@ -24,7 +25,8 @@ interface GiftoraContextType {
   deleteRecipient: (id: string) => void;
   updateSearchCriteria: (criteria: Partial<SearchCriteria>) => void;
   resetSearchCriteria: () => void;
-  loginUser: (email: string, name?: string) => void;
+  loginUser: (email: string, password?: string) => Promise<boolean>;
+  signupUser: (name: string, email: string, password: string) => Promise<boolean>;
   logoutUser: () => void;
   updateUserProfile: (updates: Partial<UserProfile>) => void;
   showToast: (message: string) => void;
@@ -38,16 +40,6 @@ const defaultSearchCriteria: SearchCriteria = {
   budgetRange: { min: 500, max: 2500 },
   query: "Something thoughtful and warm for quiet creative evenings",
   age: "26-30",
-};
-
-const defaultUserProfile: UserProfile = {
-  name: "Ananya Sharma",
-  email: "ananya.sharma@example.com",
-  avatar: "https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=200&q=80",
-  currency: "INR",
-  notificationEmail: true,
-  assistantTone: "warm",
-  savedAddress: "Indiranagar, Bengaluru, KA 560038",
 };
 
 const GiftoraContext = createContext<GiftoraContextType | undefined>(undefined);
@@ -92,8 +84,40 @@ export function GiftoraProvider({ children }: { children: React.ReactNode }) {
         if (saved) return JSON.parse(saved);
       } catch {}
     }
-    return defaultUserProfile;
+    return null;
   });
+
+  // Verify and sync genuine backend session on mount
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      const token = localStorage.getItem("giftora_auth_token");
+      if (token) {
+        api.getMe()
+          .then((me) => {
+            const liveUser: UserProfile = {
+              name: me.full_name,
+              email: me.email,
+              avatar: "https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=200&q=80",
+              currency: (me.preferred_currency as UserProfile["currency"]) || "INR",
+              notificationEmail: true,
+              assistantTone: "warm",
+            };
+            setUser(liveUser);
+            try {
+              localStorage.setItem("giftora_user", JSON.stringify(liveUser));
+            } catch {}
+          })
+          .catch(() => {
+            // Token expired or invalid
+            api.setToken(null);
+            setUser(null);
+            try {
+              localStorage.removeItem("giftora_user");
+            } catch {}
+          });
+      }
+    }
+  }, []);
 
   const [toast, setToast] = useState<string | null>(null);
 
@@ -225,26 +249,79 @@ export function GiftoraProvider({ children }: { children: React.ReactNode }) {
     setActiveSearch(defaultSearchCriteria);
   };
 
-  const loginUser = (email: string, name?: string) => {
-    const newUser: UserProfile = {
-      name: name || email.split("@")[0],
-      email: email,
-      avatar: "https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=200&q=80",
-      currency: "INR",
-      notificationEmail: true,
-      assistantTone: "warm",
-    };
-    setUser(newUser);
+  const loginUser = async (email: string, password?: string): Promise<boolean> => {
+    if (password) {
+      try {
+        await api.login({ email, password });
+        const me = await api.getMe();
+        const profile: UserProfile = {
+          name: me.full_name,
+          email: me.email,
+          avatar: "https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=200&q=80",
+          currency: (me.preferred_currency as UserProfile["currency"]) || "INR",
+          notificationEmail: true,
+          assistantTone: "warm",
+        };
+        setUser(profile);
+        try {
+          localStorage.setItem("giftora_user", JSON.stringify(profile));
+        } catch {}
+        showToast(`Welcome back, ${profile.name}!`);
+        return true;
+      } catch (err: unknown) {
+        const msg = err instanceof Error ? err.message : "Authentication failed";
+        showToast(msg);
+        throw err;
+      }
+    } else {
+      const guestUser: UserProfile = {
+        name: email.split("@")[0],
+        email: email,
+        avatar: "https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=200&q=80",
+        currency: "INR",
+        notificationEmail: true,
+        assistantTone: "warm",
+      };
+      setUser(guestUser);
+      try {
+        localStorage.setItem("giftora_user", JSON.stringify(guestUser));
+      } catch {}
+      showToast(`Welcome, ${guestUser.name}!`);
+      return true;
+    }
+  };
+
+  const signupUser = async (name: string, email: string, password: string): Promise<boolean> => {
     try {
-      localStorage.setItem("giftora_user", JSON.stringify(newUser));
-    } catch {}
-    showToast(`Welcome back, ${newUser.name}!`);
+      await api.register({ full_name: name, email, password });
+      const me = await api.getMe();
+      const newProfile: UserProfile = {
+        name: me.full_name,
+        email: me.email,
+        avatar: "https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=200&q=80",
+        currency: (me.preferred_currency as UserProfile["currency"]) || "INR",
+        notificationEmail: true,
+        assistantTone: "warm",
+      };
+      setUser(newProfile);
+      try {
+        localStorage.setItem("giftora_user", JSON.stringify(newProfile));
+      } catch {}
+      showToast(`Welcome to Giftora, ${newProfile.name}!`);
+      return true;
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : "Registration failed";
+      showToast(msg);
+      throw err;
+    }
   };
 
   const logoutUser = () => {
     setUser(null);
+    api.setToken(null);
     try {
       localStorage.removeItem("giftora_user");
+      localStorage.removeItem("giftora_auth_token");
     } catch {}
     showToast("Logged out successfully");
   };
@@ -281,6 +358,7 @@ export function GiftoraProvider({ children }: { children: React.ReactNode }) {
         updateSearchCriteria,
         resetSearchCriteria,
         loginUser,
+        signupUser,
         logoutUser,
         updateUserProfile,
         showToast,

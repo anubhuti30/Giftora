@@ -1,7 +1,6 @@
 "use client";
 
 import React from "react";
-import Image from "next/image";
 import Link from "next/link";
 import { 
   Layers, 
@@ -18,9 +17,25 @@ import { AppSidebar } from "@/components/layout/AppSidebar";
 import { useGiftora } from "@/context/GiftoraContext";
 import { MOCK_PRODUCTS } from "@/data/mockProducts";
 import { formatPriceINR } from "@/lib/utils";
+import { SafeImage } from "@/components/ui/SafeImage";
+import { Product } from "@/types";
 
 export default function ComparePage() {
   const { compareList, removeFromCompare, clearCompare, toggleWishlist, isInWishlist, toggleCompare } = useGiftora();
+
+  const getResolvedUrl = (p: Product) => {
+    if (p.productUrl && !p.productUrl.includes("/sample/")) {
+      return p.productUrl;
+    }
+    const query = encodeURIComponent(p.title);
+    if (p.source === "Amazon India") return `https://www.amazon.in/s?k=${query}`;
+    if (p.source === "Etsy") return `https://www.etsy.com/in-en/search?q=${query}`;
+    if (p.source === "Tata CLiQ Luxury") return `https://luxury.tatacliq.com/search/?searchCategory=all&text=${query}`;
+    if (p.source === "Fabindia") return `https://www.fabindia.com/search?q=${query}`;
+    if (p.source === "Nicobar") return `https://www.nicobar.com/search?q=${query}`;
+    if (p.source === "Forest Essentials") return `https://www.forestessentialsindia.com/catalogsearch/result/?q=${query}`;
+    return `https://www.google.com/search?q=${encodeURIComponent(`${p.title} ${p.source}`)}`;
+  };
 
   // If user has 0 items in compare, allow one-click quick comparison loading
   const handleLoadSampleCompare = () => {
@@ -34,7 +49,7 @@ export default function ComparePage() {
     <div className="min-h-screen flex flex-col bg-[#F8F5F0]">
       <Navbar />
 
-      <div className="flex-1 max-w-7xl w-full mx-auto flex flex-col lg:flex-row">
+      <div className="flex-1 max-w-[1400px] w-full mx-auto flex flex-col lg:flex-row">
         <AppSidebar />
 
         <main className="flex-1 flex flex-col min-h-[calc(100vh-80px)] p-4 sm:p-6 lg:p-8">
@@ -119,11 +134,12 @@ export default function ComparePage() {
 
                           {/* Image */}
                           <div className="relative aspect-[4/3] rounded-2xl overflow-hidden bg-stone-100 border border-[#E6DDE5] mb-3">
-                            <Image
+                            <SafeImage
                               src={product.imageUrl}
                               alt={product.title}
                               fill
                               className="object-cover"
+                              fallbackSrc="/images/hero/luxury_gift_hero.jpg"
                             />
                             <button
                               onClick={() => toggleWishlist(product)}
@@ -250,7 +266,7 @@ export default function ComparePage() {
                       {compareList.map((product) => (
                         <td key={product.id} className="p-4 sm:p-6">
                           <a
-                            href={product.productUrl}
+                            href={getResolvedUrl(product)}
                             target="_blank"
                             rel="noopener noreferrer"
                             className="w-full inline-flex items-center justify-center gap-2 py-2.5 px-4 rounded-xl bg-[#422C42] hover:bg-[#9B668B] text-white text-xs font-semibold shadow-soft transition-all active:scale-95"

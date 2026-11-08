@@ -1,9 +1,9 @@
 "use client";
 
 import React, { useState } from "react";
-import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { SafeImage } from "@/components/ui/SafeImage";
 import { 
   Users, 
   Plus, 
@@ -161,11 +161,12 @@ export default function RecipientsPage() {
                       <div className="flex items-center gap-3.5">
                         <div className="w-12 h-12 rounded-2xl overflow-hidden bg-[#E9DDE7] relative shrink-0 border border-[#E6DDE5]">
                           {rec.avatarUrl ? (
-                            <Image
+                            <SafeImage
                               src={rec.avatarUrl}
                               alt={rec.name}
                               fill
                               className="object-cover"
+                              fallbackSrc="/images/categories/beauty.jpg"
                             />
                           ) : (
                             <div className="w-full h-full flex items-center justify-center text-[#422C42] font-bold text-lg">

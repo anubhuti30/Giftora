@@ -1,7 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
-import Image from "next/image";
+import React from "react";
 import { 
   Heart, 
   Layers, 
@@ -13,6 +12,7 @@ import {
 import { Product } from "@/types";
 import { formatPriceINR } from "@/lib/utils";
 import { useGiftora } from "@/context/GiftoraContext";
+import { SafeImage } from "@/components/ui/SafeImage";
 
 interface ProductCardProps {
   product: Product;
@@ -20,10 +20,25 @@ interface ProductCardProps {
 
 export function ProductCard({ product }: ProductCardProps) {
   const { toggleWishlist, isInWishlist, toggleCompare, isInCompare } = useGiftora();
-  const [imgSrc, setImgSrc] = useState(product.imageUrl);
 
   const isFavorited = isInWishlist(product.id);
   const isCompared = isInCompare(product.id);
+
+  const getResolvedUrl = (p: Product) => {
+    if (p.productUrl && !p.productUrl.includes("/sample/")) {
+      return p.productUrl;
+    }
+    const query = encodeURIComponent(p.title);
+    if (p.source === "Amazon India") return `https://www.amazon.in/s?k=${query}`;
+    if (p.source === "Etsy") return `https://www.etsy.com/in-en/search?q=${query}`;
+    if (p.source === "Tata CLiQ Luxury") return `https://luxury.tatacliq.com/search/?searchCategory=all&text=${query}`;
+    if (p.source === "Fabindia") return `https://www.fabindia.com/search?q=${query}`;
+    if (p.source === "Nicobar") return `https://www.nicobar.com/search?q=${query}`;
+    if (p.source === "Forest Essentials") return `https://www.forestessentialsindia.com/catalogsearch/result/?q=${query}`;
+    return `https://www.google.com/search?q=${encodeURIComponent(`${p.title} ${p.source}`)}`;
+  };
+
+  const resolvedUrl = getResolvedUrl(product);
 
   const getSourceBadgeClass = (source: string) => {
     switch (source) {
@@ -49,16 +64,13 @@ export function ProductCard({ product }: ProductCardProps) {
       
       {/* Top Media Container */}
       <div className="relative aspect-[4/3] w-full bg-[#FAF8F5] overflow-hidden">
-        <Image
-          src={imgSrc}
+        <SafeImage
+          src={product.imageUrl}
           alt={product.title}
           fill
           sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
           className="object-cover group-hover:scale-105 transition-transform duration-500"
-          onError={() => {
-            // Local verified fallback image
-            setImgSrc("/images/hero/luxury_gift_hero.jpg");
-          }}
+          fallbackSrc="/images/hero/luxury_gift_hero.jpg"
         />
 
         {/* Source Marketplace Pill & DEMO Tag */}
@@ -191,7 +203,7 @@ export function ProductCard({ product }: ProductCardProps) {
 
           {/* External Marketplace Link */}
           <a
-            href={product.productUrl}
+            href={resolvedUrl}
             target="_blank"
             rel="noopener noreferrer"
             className="inline-flex items-center gap-1.5 text-xs font-semibold text-[#422C42] hover:text-[#9B668B] bg-[#F4EEF3] hover:bg-[#E9DDE7] px-3 py-1.5 rounded-lg transition-colors"

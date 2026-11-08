@@ -10,14 +10,15 @@ export default function LoginPage() {
   const router = useRouter();
   const { loginUser } = useGiftora();
 
-  const [email, setEmail] = useState("ananya.sharma@example.com");
-  const [password, setPassword] = useState("SecretGift123!");
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [rememberMe, setRememberMe] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
+  const [googleOauthNotice, setGoogleOauthNotice] = useState(false);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
 
@@ -32,11 +33,19 @@ export default function LoginPage() {
     }
 
     setIsLoading(true);
-    setTimeout(() => {
-      loginUser(email, email.split("@")[0]);
-      setIsLoading(false);
+    try {
+      await loginUser(email, password);
       router.push("/discover");
-    }, 600);
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : "Invalid email or password. Please try again.";
+      setError(msg);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleGoogleClick = () => {
+    setGoogleOauthNotice(true);
   };
 
   return (
@@ -68,14 +77,11 @@ export default function LoginPage() {
             </div>
           )}
 
-          {/* Google Sign In Placeholder */}
+          {/* Google Sign In Button */}
           <div>
             <button
               type="button"
-              onClick={() => {
-                loginUser("google.demo@giftora.com", "Google User");
-                router.push("/discover");
-              }}
+              onClick={handleGoogleClick}
               className="w-full flex items-center justify-center gap-3 py-3 px-4 rounded-xl border border-[#E6DDE5] hover:bg-[#FAF8F5] text-xs font-semibold text-[#29252A] transition-all relative group"
             >
               <svg className="w-4 h-4 shrink-0" viewBox="0 0 24 24">
@@ -97,14 +103,40 @@ export default function LoginPage() {
                 />
               </svg>
               <span>Continue with Google</span>
-              <span className="text-[10px] text-[#9B668B] bg-[#F2E8F0] px-2 py-0.5 rounded-full font-medium ml-1">
-                UI Placeholder
-              </span>
             </button>
             <p className="text-[10px] text-center text-[#8E8691] mt-1.5">
-              UI integration placeholder — ready for Supabase Auth configuration
+              Secure single sign-on with your Google Workspace or personal account
             </p>
           </div>
+
+          {/* Google OAuth Modal */}
+          {googleOauthNotice && (
+            <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm p-4">
+              <div className="bg-white rounded-3xl p-6 sm:p-8 max-w-md w-full shadow-2xl border border-[#E6DDE5] space-y-4">
+                <div className="w-12 h-12 rounded-2xl bg-[#F2E8F0] text-[#9B668B] flex items-center justify-center mx-auto">
+                  <ShieldCheck className="w-6 h-6" />
+                </div>
+                <div className="text-center space-y-2">
+                  <h3 className="font-serif text-lg font-bold text-[#422C42]">
+                    Google Single Sign-On Setup
+                  </h3>
+                  <p className="text-xs text-[#6E6770] leading-relaxed">
+                    Google OAuth client credentials are configured in production via <code className="bg-[#FAF8F5] px-1.5 py-0.5 rounded text-[11px] font-mono text-[#422C42]">GOOGLE_CLIENT_ID</code>.
+                  </p>
+                  <p className="text-xs text-[#6E6770] leading-relaxed">
+                    For local testing and standard account access, please use your email and password below or create a free test account in 5 seconds.
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setGoogleOauthNotice(false)}
+                  className="w-full py-2.5 px-4 rounded-xl bg-[#422C42] text-white text-xs font-semibold hover:bg-[#9B668B] transition-colors"
+                >
+                  Continue with Email & Password
+                </button>
+              </div>
+            </div>
+          )}
 
           <div className="relative">
             <div className="absolute inset-0 flex items-center">

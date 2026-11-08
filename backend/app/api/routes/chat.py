@@ -57,8 +57,16 @@ def handle_chat_message(
         except Exception:
             db.rollback()
 
+    # Build chat history from request or database
+    history = request.chat_history or []
+    if not history and db_conv and db_conv.messages:
+        history = [
+            {"role": m.sender_type, "content": m.message_content}
+            for m in db_conv.messages[-10:]
+        ]
+
     # Extract requirements via AI service
-    extracted = ai_service.extract_gift_requirements(request.message)
+    extracted = ai_service.extract_gift_requirements(request.message, chat_history=history)
 
     # Formulate assistant reply
     rel = extracted.relationship or "them"

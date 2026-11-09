@@ -87,11 +87,7 @@ def perform_gift_search(
                 conversation_id=request.conversation_id,
                 occasion=request.occasion or extracted_needs.get("occasion"),
                 original_query=query_text,
-                extracted_preferences={
-                    **(extracted_needs if isinstance(extracted_needs, dict) else {}),
-                    "_visual_inspirations": workflow_result.get("visual_inspirations", []),
-                    "_external_ai_destination": workflow_result.get("external_ai_destination"),
-                },
+                extracted_preferences=extracted_needs if isinstance(extracted_needs, dict) else {},
                 minimum_budget=request.minimum_budget,
                 maximum_budget=request.maximum_budget,
                 search_status="COMPLETED",
@@ -176,8 +172,6 @@ def perform_gift_search(
         "saved_in_database": saved_in_db,
         "recommendations_count": len(ranked_recs),
         "recommendations": ranked_recs,
-        "visual_inspirations": workflow_result.get("visual_inspirations", []),
-        "external_ai_destination": workflow_result.get("external_ai_destination"),
         "status": "COMPLETED",
         "created_at": datetime.utcnow().isoformat(),
     }
@@ -229,10 +223,6 @@ def get_search_results(
             "match_explanation": r.match_explanation,
         })
 
-    prefs = session.extracted_preferences if isinstance(session.extracted_preferences, dict) else {}
-    visual_inspirations = prefs.get("_visual_inspirations", [])
-    external_ai_destination = prefs.get("_external_ai_destination")
-
     return {
         "id": session.id,
         "original_query": session.original_query,
@@ -241,8 +231,6 @@ def get_search_results(
         "search_status": session.search_status,
         "created_at": session.created_at.isoformat(),
         "recommendations": formatted_recs,
-        "visual_inspirations": visual_inspirations,
-        "external_ai_destination": external_ai_destination,
     }
 
 

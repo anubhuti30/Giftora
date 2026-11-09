@@ -3,7 +3,6 @@
 import React, { Suspense, useState, useMemo, useEffect } from "react";
 import { useSearchParams } from "next/navigation";
 import Link from "next/link";
-import Image from "next/image";
 import { 
   Sparkles, 
   ArrowLeft, 
@@ -11,8 +10,7 @@ import {
   RotateCcw, 
   Search, 
   ShieldCheck,
-  ExternalLink,
-  Camera
+  ExternalLink
 } from "lucide-react";
 import { Navbar } from "@/components/layout/Navbar";
 import { AppSidebar } from "@/components/layout/AppSidebar";
@@ -21,7 +19,7 @@ import { CompareFloatingBar } from "@/components/products/CompareFloatingBar";
 import { useGiftora } from "@/context/GiftoraContext";
 import { formatPriceINR } from "@/lib/utils";
 import { api } from "@/lib/api";
-import { Product, InspirationItem, ExternalAiDestination } from "@/types";
+import { Product } from "@/types";
 
 type SearchRecommendation = {
   product_source_id: string;
@@ -45,36 +43,45 @@ type SearchRecommendation = {
 };
 
 function toProducts(items: SearchRecommendation[]): Product[] {
-  return items.map((item): Product => ({
-    id: item.product_source_id,
-    title: item.product_title,
-    price: item.price,
-    originalPrice: item.original_price ?? undefined,
-    currency: "INR",
-    source: item.marketplace_name as Product["source"],
-    category: item.category || "Gifts",
-    rating: item.rating ?? item.source_rating ?? null,
-    reviewCount: item.review_count ?? item.source_review_count ?? null,
-    imageUrl: item.image_url,
-    aiMatchReason: item.match_explanation,
-    matchScore: item.relevance_score ?? item.final_score ?? 0,
-    tags: [],
-    occasions: [],
-    features: [],
-    productUrl: item.product_url,
-    retailerSearchUrl: item.retailer_search_url,
-    linkStatus: item.link_status || (item.is_search_fallback ? "SEARCH_FALLBACK" : "VERIFIED"),
-    isSearchFallback: item.is_search_fallback ?? false,
-    valueComparison: { pros: [], idealFor: "Based on your search", deliveryEstimate: "Not verified", sentimentRating: "Not available" },
-  }));
+  return items.map((item): Product => {
+    const cleanTitle = (item.product_title || "").trim();
+    const amazonUrl = `https://www.amazon.in/s?k=${encodeURIComponent(cleanTitle)}`;
+    const flipkartUrl = `https://www.flipkart.com/search?q=${encodeURIComponent(cleanTitle)}`;
+    const myntraWords = cleanTitle.split(" ").slice(0, 3).join("-").toLowerCase().replace(/[^a-z0-9-]/g, "");
+    const myntraUrl = `https://www.myntra.com/${myntraWords || "gifts"}`;
+
+    return {
+      id: item.product_source_id,
+      title: item.product_title,
+      price: item.price,
+      originalPrice: item.original_price ?? undefined,
+      currency: "INR",
+      source: item.marketplace_name as Product["source"],
+      category: item.category || "Gifts",
+      rating: item.rating ?? item.source_rating ?? null,
+      reviewCount: item.review_count ?? item.source_review_count ?? null,
+      imageUrl: item.image_url,
+      aiMatchReason: item.match_explanation,
+      matchScore: item.relevance_score ?? item.final_score ?? 0,
+      tags: [],
+      occasions: [],
+      features: [],
+      productUrl: item.product_url,
+      retailerSearchUrl: item.retailer_search_url,
+      amazonUrl,
+      flipkartUrl,
+      myntraUrl,
+      linkStatus: item.link_status || (item.is_search_fallback ? "SEARCH_FALLBACK" : "VERIFIED"),
+      isSearchFallback: item.is_search_fallback ?? false,
+      valueComparison: { pros: [], idealFor: "Based on your search", deliveryEstimate: "Not verified", sentimentRating: "Not available" },
+    };
+  });
 }
 
 function DiscoverResultsContent() {
   const { activeSearch } = useGiftora();
   const searchParams = useSearchParams();
   const [apiProducts, setApiProducts] = useState<Product[] | null>(null);
-  const [visualInspirations, setVisualInspirations] = useState<InspirationItem[]>([]);
-  const [externalAi, setExternalAi] = useState<ExternalAiDestination | null>(null);
   const [loadError, setLoadError] = useState<string | null>(null);
 
   useEffect(() => {
@@ -86,26 +93,12 @@ function DiscoverResultsContent() {
         .then((result) => {
           if (!active) return;
           setApiProducts(toProducts(result.recommendations));
-          if (result.visual_inspirations && result.visual_inspirations.length > 0) {
-            setVisualInspirations(result.visual_inspirations);
-          }
-          if (result.external_ai_destination) {
-            setExternalAi(result.external_ai_destination);
-          }
         })
         .catch(() => {
           try {
             const cached = sessionStorage.getItem(`giftora_search_${searchId}`);
-            const cachedVisual = sessionStorage.getItem(`giftora_visual_${searchId}`);
-            const cachedAi = sessionStorage.getItem(`giftora_ai_dest_${searchId}`);
             if (active && cached) {
               setApiProducts(toProducts(JSON.parse(cached) as SearchRecommendation[]));
-              if (cachedVisual) {
-                setVisualInspirations(JSON.parse(cachedVisual));
-              }
-              if (cachedAi) {
-                setExternalAi(JSON.parse(cachedAi));
-              }
               setLoadError("Showing this browser session's search results; the saved server copy is unavailable.");
               return;
             }
@@ -117,7 +110,6 @@ function DiscoverResultsContent() {
         });
     } else {
       // Graceful fallback when navigating without ?search_id=:
-      // 1. Check if sessionStorage has a recent search
       try {
         const lastSearchId = sessionStorage.getItem("giftora_last_search_id");
         if (lastSearchId) {
@@ -126,17 +118,13 @@ function DiscoverResultsContent() {
             const parsed = JSON.parse(cached) as SearchRecommendation[];
             if (parsed.length > 0) {
               setApiProducts(toProducts(parsed));
-              const cachedVisual = sessionStorage.getItem(`giftora_visual_${lastSearchId}`);
-              if (cachedVisual) setVisualInspirations(JSON.parse(cachedVisual));
-              const cachedAi = sessionStorage.getItem(`giftora_ai_dest_${lastSearchId}`);
-              if (cachedAi) setExternalAi(JSON.parse(cachedAi));
               return;
             }
           }
         }
       } catch {}
 
-      // 2. Otherwise execute live search using activeSearch parameters
+      // Execute live search using activeSearch parameters
       const reqInterests = (activeSearch.interests && activeSearch.interests.length > 0)
         ? activeSearch.interests
         : [];
@@ -155,12 +143,6 @@ function DiscoverResultsContent() {
       }).then((result) => {
         if (!active) return;
         setApiProducts(toProducts(result.recommendations as SearchRecommendation[]));
-        if (result.visual_inspirations && result.visual_inspirations.length > 0) {
-          setVisualInspirations(result.visual_inspirations);
-        }
-        if (result.external_ai_destination) {
-          setExternalAi(result.external_ai_destination);
-        }
       }).catch(() => {
         if (active) setApiProducts([]);
       });
@@ -172,15 +154,24 @@ function DiscoverResultsContent() {
   // Filters & Sorting state
   const [selectedSource, setSelectedSource] = useState<string>("all");
   const [selectedSort, setSelectedSort] = useState<string>("match");
-  const [maxPrice, setMaxPrice] = useState<number>(activeSearch.budgetRange.max || 50000);
+  const [maxPrice, setMaxPrice] = useState<number>(50000);
   const [filterCategory, setFilterCategory] = useState<string>("all");
   const [searchQuery, setSearchQuery] = useState<string>("");
 
+  const sliderMax = useMemo(() => {
+    const highestProductPrice = apiProducts && apiProducts.length > 0
+      ? Math.max(...apiProducts.map((p) => p.price))
+      : 0;
+    return Math.max(50000, activeSearch.budgetRange?.max || 0, highestProductPrice);
+  }, [apiProducts, activeSearch.budgetRange?.max]);
+
   useEffect(() => {
-    if (activeSearch.budgetRange?.max && activeSearch.budgetRange.max > 0) {
-      setMaxPrice(activeSearch.budgetRange.max);
-    }
-  }, [activeSearch.budgetRange?.max]);
+    const highestProductPrice = apiProducts && apiProducts.length > 0
+      ? Math.max(...apiProducts.map((p) => p.price))
+      : 0;
+    const initialCeiling = Math.max(activeSearch.budgetRange?.max || 50000, highestProductPrice);
+    setMaxPrice(initialCeiling);
+  }, [activeSearch.budgetRange?.max, apiProducts]);
 
   // Dynamically compute available sources from returned shopping products only (excluding Pinterest)
   const sources = useMemo(() => {
@@ -385,7 +376,7 @@ function DiscoverResultsContent() {
                 <input
                   type="range"
                   min="500"
-                  max="25000"
+                  max={sliderMax}
                   step="500"
                   value={maxPrice}
                   onChange={(e) => setMaxPrice(Number(e.target.value))}
@@ -394,6 +385,22 @@ function DiscoverResultsContent() {
                 <span className="font-semibold text-[#422C42] w-16 text-right">
                   {formatPriceINR(maxPrice)}
                 </span>
+
+                {/* Reset Filters Quick Button */}
+                {(selectedSource !== "all" || filterCategory !== "all" || searchQuery.trim() !== "" || maxPrice < sliderMax) && (
+                  <button
+                    onClick={() => {
+                      setSelectedSource("all");
+                      setFilterCategory("all");
+                      setMaxPrice(sliderMax);
+                      setSearchQuery("");
+                    }}
+                    className="inline-flex items-center gap-1 text-[11px] font-semibold text-[#834E74] hover:text-[#422C42] bg-[#F2E8F0] px-2 py-1 rounded-lg transition-colors ml-2"
+                  >
+                    <RotateCcw className="w-3 h-3" />
+                    <span>Reset</span>
+                  </button>
+                )}
               </div>
 
             </div>
@@ -423,7 +430,7 @@ function DiscoverResultsContent() {
                   onClick={() => {
                     setSelectedSource("all");
                     setFilterCategory("all");
-                    setMaxPrice(50000);
+                    setMaxPrice(sliderMax);
                     setSearchQuery("");
                   }}
                   className="px-4 py-2 bg-[#422C42] text-white text-xs font-semibold rounded-xl hover:bg-[#9B668B] transition-colors"
@@ -431,126 +438,6 @@ function DiscoverResultsContent() {
                   Reset all filters
                 </button>
               </div>
-            </div>
-          )}
-
-          {/* Visual Inspiration Section (Pinterest Ideas) */}
-          {visualInspirations.length > 0 && (
-            <section className="mt-12 pt-8 border-t border-[#E6DDE5]">
-              <div className="mb-6 flex flex-col sm:flex-row sm:items-end justify-between gap-3">
-                <div>
-                  <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-[#E60023]/10 text-[#E60023] text-xs font-semibold mb-2">
-                    <Camera className="w-3.5 h-3.5" />
-                    <span>Visual Inspiration & Aesthetics</span>
-                  </div>
-                  <h2 className="font-serif text-xl sm:text-2xl font-bold text-[#422C42]">
-                    Aesthetic Moodboards & Idea Pins
-                  </h2>
-                  <p className="text-xs sm:text-sm text-[#6E6770] mt-1">
-                    Explore creative styling, color palettes, and gift aesthetic ideas from Pinterest. These are inspiration pins, not commercial inventory.
-                  </p>
-                </div>
-              </div>
-
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-                {visualInspirations.map((pin) => (
-                  <div
-                    key={pin.id}
-                    className="group bg-white rounded-2xl border border-[#E6DDE5] overflow-hidden flex flex-col shadow-soft hover:shadow-card hover:border-[#E60023]/30 transition-all duration-300"
-                  >
-                    <div className="relative aspect-[4/3] w-full bg-[#FAF8F5] overflow-hidden">
-                      <Image
-                        src={pin.image_url}
-                        alt={pin.title}
-                        fill
-                        sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
-                        className="object-cover group-hover:scale-105 transition-transform duration-500"
-                      />
-                      <div className="absolute top-3 left-3 z-10">
-                        <span className="text-[11px] font-semibold tracking-wide px-2.5 py-1 rounded-full bg-[#E60023] text-white shadow-xs">
-                          Pinterest
-                        </span>
-                      </div>
-                      <div className="absolute bottom-3 left-3 z-10">
-                        <span className="text-[10px] font-semibold tracking-wide px-2 py-0.5 rounded-full bg-white/95 text-[#422C42] border border-[#E6DDE5] backdrop-blur-xs">
-                          Inspiration Only • No Price
-                        </span>
-                      </div>
-                    </div>
-
-                    <div className="p-4 sm:p-5 flex flex-col flex-1 justify-between">
-                      <div>
-                        <h3 className="font-serif text-base font-bold text-[#29252A] group-hover:text-[#422C42] line-clamp-2">
-                          {pin.title}
-                        </h3>
-                        <p className="mt-2 text-xs text-[#6E6770] line-clamp-3 leading-relaxed">
-                          {pin.description}
-                        </p>
-                        {pin.tags && pin.tags.length > 0 && (
-                          <div className="mt-3 flex flex-wrap gap-1">
-                            {pin.tags.slice(0, 3).map((tag, idx) => (
-                              <span
-                                key={idx}
-                                className="text-[10px] bg-[#FAF8F5] text-[#8E8691] px-2 py-0.5 rounded-md border border-[#E6DDE5]"
-                              >
-                                #{tag}
-                              </span>
-                            ))}
-                          </div>
-                        )}
-                      </div>
-
-                      <div className="mt-4 pt-3.5 border-t border-[#E6DDE5]/80 flex items-center justify-between">
-                        <span className="text-[11px] text-[#8E8691] italic">
-                          Visual concept
-                        </span>
-                        <a
-                          href={pin.inspiration_url}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="inline-flex items-center gap-1.5 text-xs font-semibold text-[#E60023] hover:text-[#ad0018] bg-rose-50 hover:bg-rose-100 px-3 py-1.5 rounded-lg transition-colors"
-                        >
-                          <span>Explore on Pinterest</span>
-                          <ExternalLink className="w-3 h-3" />
-                        </a>
-                      </div>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </section>
-          )}
-
-          {/* External AI Discovery Prompt (ChatGPT) */}
-          {externalAi && (
-            <div className="mt-8 p-5 rounded-2xl bg-gradient-to-r from-emerald-50/80 via-[#FAF8F5] to-[#F8F5F0] border border-emerald-200 shadow-soft flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-              <div className="flex items-start gap-3">
-                <div className="w-10 h-10 rounded-xl bg-emerald-600 text-white flex items-center justify-center shrink-0 mt-0.5 shadow-xs">
-                  <Sparkles className="w-5 h-5" />
-                </div>
-                <div>
-                  <div className="flex items-center gap-2">
-                    <h3 className="font-serif text-base font-bold text-[#422C42]">
-                      {externalAi.title}
-                    </h3>
-                    <span className="text-[10px] font-semibold uppercase tracking-wider px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800">
-                      AI Inspiration
-                    </span>
-                  </div>
-                  <p className="text-xs text-[#6E6770] mt-1 max-w-2xl leading-relaxed">
-                    {externalAi.description}
-                  </p>
-                </div>
-              </div>
-              <a
-                href={externalAi.destination_url}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="inline-flex items-center gap-2 px-4 py-2 bg-emerald-700 hover:bg-emerald-800 text-white text-xs font-semibold rounded-xl transition-colors shrink-0 shadow-xs self-stretch sm:self-auto justify-center"
-              >
-                <span>Brainstorm in ChatGPT</span>
-                <ExternalLink className="w-3.5 h-3.5" />
-              </a>
             </div>
           )}
 

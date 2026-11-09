@@ -1,7 +1,7 @@
 "use client";
 
 import React from "react";
-import Image from "next/image";
+import { SafeImage } from "@/components/ui/SafeImage";
 import Link from "next/link";
 import { Layers, ArrowRight, X } from "lucide-react";
 import { useGiftora } from "@/context/GiftoraContext";
@@ -34,11 +34,12 @@ export function CompareFloatingBar() {
             {compareList.map((product) => (
               <div key={product.id} className="relative group/thumb shrink-0">
                 <div className="w-10 h-10 rounded-xl overflow-hidden border border-[#9B668B] bg-white relative">
-                  <Image
+                  <SafeImage
                     src={product.imageUrl}
                     alt={product.title}
                     fill
                     className="object-cover"
+                    fallbackSrc="/images/hero/luxury_gift_hero.jpg"
                   />
                 </div>
                 <button

@@ -119,8 +119,6 @@ class GiftoraApiClient {
       extracted_needs: Record<string, unknown>;
       recommendations_count: number;
       recommendations: any[];
-      visual_inspirations?: any[];
-      external_ai_destination?: any;
     }>("/api/v1/search/gift-search", {
       method: "POST",
       body: JSON.stringify(params),
@@ -148,8 +146,6 @@ class GiftoraApiClient {
         match_explanation: string;
         category?: string;
       }>;
-      visual_inspirations?: any[];
-      external_ai_destination?: any;
     }>(`/api/v1/search/${encodeURIComponent(searchId)}`);
   }
 

@@ -19,6 +19,12 @@ export function SafeImage({
   const [hasError, setHasError] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
 
+  React.useEffect(() => {
+    setImgSrc(src);
+    setHasError(false);
+    setIsLoading(true);
+  }, [src]);
+
   return (
     <div className={`relative overflow-hidden ${props.fill ? "w-full h-full" : ""}`}>
       {/* Subtle skeleton shimmer during load */}

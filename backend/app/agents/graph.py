@@ -79,34 +79,6 @@ def run_gift_curator(
         final_state = gift_curator_app.invoke(initial_state)
         # Final state can be a dict or AgentWorkflowState depending on langgraph version
         res_dict = final_state if isinstance(final_state, dict) else final_state.model_dump()
-
-        # Generate separate Pinterest visual inspiration (never represented as shopping products)
-        from app.connectors.pinterest import PinterestConnector
-        import urllib.parse
-        interests = res_dict.get("user_interests") or user_interests or []
-        occ = res_dict.get("occasion") or occasion
-        rel = res_dict.get("relationship") or relationship or "recipient"
-        pin_connector = PinterestConnector()
-        inspirations = pin_connector.get_inspirations(
-            interests=interests,
-            occasion=occ,
-            recipient_relationship=rel,
-            limit=4,
-        )
-        res_dict["visual_inspirations"] = [item.model_dump() for item in inspirations]
-
-        # External AI Inspiration Destination (ChatGPT prompt pre-fill)
-        interests_str = ", ".join(interests) if interests else "thoughtful gifts"
-        budget_str = f"up to INR {maximum_budget}" if maximum_budget else "flexible"
-        prompt_query = f"I am searching for thoughtful gift ideas for my {rel} for {occ or 'a special occasion'}. Their passions include {interests_str}, budget {budget_str}. Please suggest creative and personalized gift concepts."
-        res_dict["external_ai_destination"] = {
-            "provider": "ChatGPT",
-            "title": "Brainstorm further concepts on ChatGPT",
-            "description": "Launch an external AI brainstorm session with pre-filled recipient context.",
-            "destination_url": f"https://chatgpt.com/?q={urllib.parse.quote_plus(prompt_query)}",
-            "is_retailer": False,
-        }
-
         return res_dict
     except Exception as e:
         logger.error(f"Error executing gift curator graph: {e}", exc_info=True)

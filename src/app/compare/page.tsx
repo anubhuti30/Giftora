@@ -1,7 +1,7 @@
 "use client";
 
 import React from "react";
-import Image from "next/image";
+import { SafeImage } from "@/components/ui/SafeImage";
 import Link from "next/link";
 import { 
   Layers, 
@@ -103,11 +103,12 @@ export default function ComparePage() {
 
                           {/* Image */}
                           <div className="relative aspect-[4/3] rounded-2xl overflow-hidden bg-stone-100 border border-[#E6DDE5] mb-3">
-                            <Image
+                            <SafeImage
                               src={product.imageUrl}
                               alt={product.title}
                               fill
                               className="object-cover"
+                              fallbackSrc="/images/hero/luxury_gift_hero.jpg"
                             />
                             <button
                               onClick={() => toggleWishlist(product)}
@@ -238,8 +239,13 @@ export default function ComparePage() {
                         const label = product.linkStatus === "VERIFIED" && product.productUrl
                           ? "View Product"
                           : `Search on ${product.source.replace(" India", "")}`;
+                        const amazonUrl = product.amazonUrl || `https://www.amazon.in/s?k=${encodeURIComponent(product.title)}`;
+                        const flipkartUrl = product.flipkartUrl || `https://www.flipkart.com/search?q=${encodeURIComponent(product.title)}`;
+                        const cleanKeywords = product.title.split(" ").slice(0, 3).join("-").toLowerCase().replace(/[^a-z0-9-]/g, "");
+                        const myntraUrl = product.myntraUrl || `https://www.myntra.com/${cleanKeywords || "gifts"}`;
+
                         return (
-                          <td key={product.id} className="p-4 sm:p-6">
+                          <td key={product.id} className="p-4 sm:p-6 space-y-2.5">
                             <a
                               href={destination}
                               target="_blank"
@@ -249,6 +255,39 @@ export default function ComparePage() {
                               <span>{label}</span>
                               <ExternalLink className="w-3.5 h-3.5" />
                             </a>
+
+                            {/* Direct Shopping Links */}
+                            <div className="flex flex-col gap-1 pt-1 border-t border-[#E6DDE5]/60 text-[11px]">
+                              <span className="font-semibold text-[10px] uppercase tracking-wider text-[#8E8691]">
+                                Check Retailers:
+                              </span>
+                              <div className="flex items-center gap-1.5 flex-wrap">
+                                <a
+                                  href={amazonUrl}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  className="px-2 py-0.5 rounded bg-amber-50 hover:bg-amber-100 text-amber-900 border border-amber-200/80 font-medium transition-colors"
+                                >
+                                  Amazon
+                                </a>
+                                <a
+                                  href={flipkartUrl}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  className="px-2 py-0.5 rounded bg-blue-50 hover:bg-blue-100 text-blue-900 border border-blue-200/80 font-medium transition-colors"
+                                >
+                                  Flipkart
+                                </a>
+                                <a
+                                  href={myntraUrl}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  className="px-2 py-0.5 rounded bg-pink-50 hover:bg-pink-100 text-pink-900 border border-pink-200/80 font-medium transition-colors"
+                                >
+                                  Myntra
+                                </a>
+                              </div>
+                            </div>
                           </td>
                         );
                       })}

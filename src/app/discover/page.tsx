@@ -154,12 +154,6 @@ function DiscoverContent() {
       try { 
         sessionStorage.setItem("giftora_last_search_id", response.search_id);
         sessionStorage.setItem(`giftora_search_${response.search_id}`, JSON.stringify(response.recommendations));
-        if (response.visual_inspirations) {
-          sessionStorage.setItem(`giftora_visual_${response.search_id}`, JSON.stringify(response.visual_inspirations));
-        }
-        if (response.external_ai_destination) {
-          sessionStorage.setItem(`giftora_ai_dest_${response.search_id}`, JSON.stringify(response.external_ai_destination));
-        }
       } catch {}
       router.push(`/discover/results?search_id=${encodeURIComponent(response.search_id)}`);
     } catch {

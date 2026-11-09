@@ -36,29 +36,13 @@ export interface Product {
   features: string[];
   productUrl?: string | null;
   retailerSearchUrl?: string;
+  amazonUrl?: string;
+  flipkartUrl?: string;
+  myntraUrl?: string;
   linkStatus?: "VERIFIED" | "INCONCLUSIVE" | "INVALID" | "SEARCH_FALLBACK";
   isSearchFallback?: boolean;
   valueComparison: ProductValueComparison;
   isCuratedFavorite?: boolean;
-}
-
-export interface InspirationItem {
-  id: string;
-  title: string;
-  description: string;
-  inspiration_url: string;
-  image_url: string;
-  tags: string[];
-  source: string;
-  is_inspiration?: boolean;
-}
-
-export interface ExternalAiDestination {
-  provider: string;
-  title: string;
-  description: string;
-  destination_url: string;
-  is_retailer: boolean;
 }
 
 export interface Recipient {

@@ -1,7 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
-import Image from "next/image";
+import React from "react";
 import { 
   Heart, 
   Layers, 
@@ -13,6 +12,7 @@ import {
 import { Product } from "@/types";
 import { formatPriceINR } from "@/lib/utils";
 import { useGiftora } from "@/context/GiftoraContext";
+import { SafeImage } from "@/components/ui/SafeImage";
 
 interface ProductCardProps {
   product: Product;
@@ -20,7 +20,6 @@ interface ProductCardProps {
 
 export function ProductCard({ product }: ProductCardProps) {
   const { toggleWishlist, isInWishlist, toggleCompare, isInCompare } = useGiftora();
-  const [imgSrc, setImgSrc] = useState(product.imageUrl);
 
   const isFavorited = isInWishlist(product.id);
   const isCompared = isInCompare(product.id);
@@ -58,21 +57,24 @@ export function ProductCard({ product }: ProductCardProps) {
     ? "View Product" 
     : `Search on ${product.source.replace(" India", "")}`;
 
+  // Multi-retailer direct shopping links for Amazon, Flipkart, Myntra
+  const amazonUrl = product.amazonUrl || `https://www.amazon.in/s?k=${encodeURIComponent(product.title)}`;
+  const flipkartUrl = product.flipkartUrl || `https://www.flipkart.com/search?q=${encodeURIComponent(product.title)}`;
+  const cleanKeywords = product.title.split(" ").slice(0, 3).join("-").toLowerCase().replace(/[^a-z0-9-]/g, "");
+  const myntraUrl = product.myntraUrl || `https://www.myntra.com/${cleanKeywords || "gifts"}`;
+
   return (
     <div className="group relative bg-white rounded-2xl border border-[#E6DDE5] overflow-hidden flex flex-col shadow-soft hover:shadow-card hover:border-[#9B668B]/40 transition-all duration-300">
       
       {/* Top Media Container */}
       <div className="relative aspect-[4/3] w-full bg-[#FAF8F5] overflow-hidden">
-        <Image
-          src={imgSrc}
+        <SafeImage
+          src={product.imageUrl}
           alt={product.title}
           fill
           sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
           className="object-cover group-hover:scale-105 transition-transform duration-500"
-          onError={() => {
-            // Local verified fallback image
-            setImgSrc("/images/hero/luxury_gift_hero.jpg");
-          }}
+          fallbackSrc="/images/hero/luxury_gift_hero.jpg"
         />
 
         {/* Source Marketplace Pill & Honest Verification Tag */}
@@ -190,45 +192,80 @@ export function ProductCard({ product }: ProductCardProps) {
         </div>
 
         {/* Card Footer Actions */}
-        <div className="mt-4 pt-3.5 border-t border-[#E6DDE5]/80 flex items-center justify-between gap-2">
-          {/* Compare status badge or toggle */}
-          <button
-            onClick={() => toggleCompare(product)}
-            className={`text-xs font-medium flex items-center gap-1 px-2.5 py-1.5 rounded-lg transition-colors ${
-              isCompared
-                ? "bg-[#E9DDE7] text-[#422C42] font-semibold"
-                : "text-[#6E6770] hover:bg-[#FAF8F5] hover:text-[#422C42]"
-            }`}
-          >
-            {isCompared ? (
-              <>
-                <Check className="w-3.5 h-3.5 text-[#9B668B]" />
-                <span>Comparing</span>
-              </>
-            ) : (
-              <>
-                <Layers className="w-3.5 h-3.5" />
-                <span>Compare</span>
-              </>
-            )}
-          </button>
-
-          {/* External Marketplace Link */}
-          {destinationUrl ? (
-            <a
-              href={destinationUrl}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="inline-flex items-center gap-1.5 text-xs font-semibold text-[#422C42] hover:text-[#9B668B] bg-[#F4EEF3] hover:bg-[#E9DDE7] px-3 py-1.5 rounded-lg transition-colors"
+        <div className="mt-4 pt-3.5 border-t border-[#E6DDE5]/80 flex flex-col gap-2.5">
+          {/* Primary Action Button & Compare */}
+          <div className="flex items-center justify-between gap-2">
+            <button
+              onClick={() => toggleCompare(product)}
+              className={`text-xs font-medium flex items-center gap-1 px-2.5 py-1.5 rounded-lg transition-colors ${
+                isCompared
+                  ? "bg-[#E9DDE7] text-[#422C42] font-semibold"
+                  : "text-[#6E6770] hover:bg-[#FAF8F5] hover:text-[#422C42]"
+              }`}
             >
-              <span>{buttonLabel}</span>
-              <ExternalLink className="w-3 h-3" />
-            </a>
-          ) : (
-            <span className="inline-flex items-center text-xs font-medium text-[#8E8691] bg-gray-100 px-3 py-1.5 rounded-lg cursor-not-allowed">
-              Retailer link unavailable
-            </span>
-          )}
+              {isCompared ? (
+                <>
+                  <Check className="w-3.5 h-3.5 text-[#9B668B]" />
+                  <span>Comparing</span>
+                </>
+              ) : (
+                <>
+                  <Layers className="w-3.5 h-3.5" />
+                  <span>Compare</span>
+                </>
+              )}
+            </button>
+
+            {destinationUrl ? (
+              <a
+                href={destinationUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-1.5 text-xs font-semibold text-[#422C42] hover:text-[#9B668B] bg-[#F4EEF3] hover:bg-[#E9DDE7] px-3 py-1.5 rounded-lg transition-colors"
+              >
+                <span>{buttonLabel}</span>
+                <ExternalLink className="w-3 h-3" />
+              </a>
+            ) : (
+              <span className="inline-flex items-center text-xs font-medium text-[#8E8691] bg-gray-100 px-3 py-1.5 rounded-lg cursor-not-allowed">
+                Retailer link unavailable
+              </span>
+            )}
+          </div>
+
+          {/* Quick Shopping Destinations for Amazon, Flipkart, Myntra */}
+          <div className="flex items-center justify-between gap-1.5 pt-2 border-t border-[#FAF8F5] text-[11px]">
+            <span className="font-medium text-[10px] uppercase tracking-wider text-[#8E8691]">Shop on:</span>
+            <div className="flex items-center gap-1">
+              <a
+                href={amazonUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                title="Search on Amazon India"
+                className="px-2 py-0.5 rounded bg-amber-50 hover:bg-amber-100 text-amber-900 border border-amber-200/80 font-medium transition-colors"
+              >
+                Amazon
+              </a>
+              <a
+                href={flipkartUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                title="Search on Flipkart"
+                className="px-2 py-0.5 rounded bg-blue-50 hover:bg-blue-100 text-blue-900 border border-blue-200/80 font-medium transition-colors"
+              >
+                Flipkart
+              </a>
+              <a
+                href={myntraUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                title="Search on Myntra"
+                className="px-2 py-0.5 rounded bg-pink-50 hover:bg-pink-100 text-pink-900 border border-pink-200/80 font-medium transition-colors"
+              >
+                Myntra
+              </a>
+            </div>
+          </div>
         </div>
       </div>
     </div>

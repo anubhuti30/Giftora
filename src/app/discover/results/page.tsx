@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useMemo, useEffect } from "react";
+import React, { Suspense, useState, useMemo, useEffect } from "react";
 import { useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { 
@@ -58,7 +58,7 @@ function toProducts(items: SearchRecommendation[]): Product[] {
   }));
 }
 
-export default function DiscoverResultsPage() {
+function DiscoverResultsContent() {
   const { activeSearch } = useGiftora();
   const searchParams = useSearchParams();
   const [apiProducts, setApiProducts] = useState<Product[] | null>(null);
@@ -330,5 +330,24 @@ export default function DiscoverResultsPage() {
 
       <CompareFloatingBar />
     </div>
+  );
+}
+
+function ResultsLoadingFallback() {
+  return (
+    <div className="min-h-screen bg-[#F8F5F0] flex items-center justify-center">
+      <div className="flex items-center gap-3 text-xs font-semibold text-[#422C42]" role="status">
+        <Sparkles className="w-5 h-5 text-[#9B668B] animate-spin" />
+        <span>Loading your personalized gift results...</span>
+      </div>
+    </div>
+  );
+}
+
+export default function DiscoverResultsPage() {
+  return (
+    <Suspense fallback={<ResultsLoadingFallback />}>
+      <DiscoverResultsContent />
+    </Suspense>
   );
 }

@@ -79,44 +79,95 @@ function DiscoverResultsContent() {
 
   useEffect(() => {
     const searchId = searchParams.get("search_id");
-    if (!searchId) return;
     let active = true;
 
-    api.getSearchResults(searchId)
-      .then((result) => {
+    if (searchId) {
+      api.getSearchResults(searchId)
+        .then((result) => {
+          if (!active) return;
+          setApiProducts(toProducts(result.recommendations));
+          if (result.visual_inspirations && result.visual_inspirations.length > 0) {
+            setVisualInspirations(result.visual_inspirations);
+          }
+          if (result.external_ai_destination) {
+            setExternalAi(result.external_ai_destination);
+          }
+        })
+        .catch(() => {
+          try {
+            const cached = sessionStorage.getItem(`giftora_search_${searchId}`);
+            const cachedVisual = sessionStorage.getItem(`giftora_visual_${searchId}`);
+            const cachedAi = sessionStorage.getItem(`giftora_ai_dest_${searchId}`);
+            if (active && cached) {
+              setApiProducts(toProducts(JSON.parse(cached) as SearchRecommendation[]));
+              if (cachedVisual) {
+                setVisualInspirations(JSON.parse(cachedVisual));
+              }
+              if (cachedAi) {
+                setExternalAi(JSON.parse(cachedAi));
+              }
+              setLoadError("Showing this browser session's search results; the saved server copy is unavailable.");
+              return;
+            }
+          } catch {}
+          if (active) {
+            setApiProducts([]);
+            setLoadError("Saved search results could not be loaded. Please return to discovery and try again.");
+          }
+        });
+    } else {
+      // Graceful fallback when navigating without ?search_id=:
+      // 1. Check if sessionStorage has a recent search
+      try {
+        const lastSearchId = sessionStorage.getItem("giftora_last_search_id");
+        if (lastSearchId) {
+          const cached = sessionStorage.getItem(`giftora_search_${lastSearchId}`);
+          if (cached) {
+            const parsed = JSON.parse(cached) as SearchRecommendation[];
+            if (parsed.length > 0) {
+              setApiProducts(toProducts(parsed));
+              const cachedVisual = sessionStorage.getItem(`giftora_visual_${lastSearchId}`);
+              if (cachedVisual) setVisualInspirations(JSON.parse(cachedVisual));
+              const cachedAi = sessionStorage.getItem(`giftora_ai_dest_${lastSearchId}`);
+              if (cachedAi) setExternalAi(JSON.parse(cachedAi));
+              return;
+            }
+          }
+        }
+      } catch {}
+
+      // 2. Otherwise execute live search using activeSearch parameters
+      const reqInterests = (activeSearch.interests && activeSearch.interests.length > 0)
+        ? activeSearch.interests
+        : [];
+      const reqMaxBudget = activeSearch.budgetRange?.max || 50000;
+      const reqMinBudget = activeSearch.budgetRange?.min || 0;
+      const reqQuery = activeSearch.query || `Gifts for ${activeSearch.recipientName || "Loved One"}`;
+
+      api.searchGifts({
+        recipient_name: activeSearch.recipientName || "Loved One",
+        relationship: activeSearch.relationship || "Loved One",
+        occasion: activeSearch.occasion || "Celebration",
+        interests: reqInterests,
+        minimum_budget: reqMinBudget,
+        maximum_budget: reqMaxBudget,
+        query: reqQuery
+      }).then((result) => {
         if (!active) return;
-        setApiProducts(toProducts(result.recommendations));
+        setApiProducts(toProducts(result.recommendations as SearchRecommendation[]));
         if (result.visual_inspirations && result.visual_inspirations.length > 0) {
           setVisualInspirations(result.visual_inspirations);
         }
         if (result.external_ai_destination) {
           setExternalAi(result.external_ai_destination);
         }
-      })
-      .catch(() => {
-        try {
-          const cached = sessionStorage.getItem(`giftora_search_${searchId}`);
-          const cachedVisual = sessionStorage.getItem(`giftora_visual_${searchId}`);
-          const cachedAi = sessionStorage.getItem(`giftora_ai_dest_${searchId}`);
-          if (active && cached) {
-            setApiProducts(toProducts(JSON.parse(cached) as SearchRecommendation[]));
-            if (cachedVisual) {
-              setVisualInspirations(JSON.parse(cachedVisual));
-            }
-            if (cachedAi) {
-              setExternalAi(JSON.parse(cachedAi));
-            }
-            setLoadError("Showing this browser session's search results; the saved server copy is unavailable.");
-            return;
-          }
-        } catch {}
-        if (active) {
-          setApiProducts([]);
-          setLoadError("Saved search results could not be loaded. Please return to discovery and try again.");
-        }
+      }).catch(() => {
+        if (active) setApiProducts([]);
       });
+    }
+
     return () => { active = false; };
-  }, [searchParams]);
+  }, [searchParams, activeSearch]);
 
   // Filters & Sorting state
   const [selectedSource, setSelectedSource] = useState<string>("all");
@@ -124,6 +175,12 @@ function DiscoverResultsContent() {
   const [maxPrice, setMaxPrice] = useState<number>(activeSearch.budgetRange.max || 50000);
   const [filterCategory, setFilterCategory] = useState<string>("all");
   const [searchQuery, setSearchQuery] = useState<string>("");
+
+  useEffect(() => {
+    if (activeSearch.budgetRange?.max && activeSearch.budgetRange.max > 0) {
+      setMaxPrice(activeSearch.budgetRange.max);
+    }
+  }, [activeSearch.budgetRange?.max]);
 
   // Dynamically compute available sources from returned shopping products only (excluding Pinterest)
   const sources = useMemo(() => {

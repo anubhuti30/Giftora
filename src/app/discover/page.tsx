@@ -152,6 +152,7 @@ function DiscoverContent() {
     try {
       const response = await api.searchGifts({ recipient_name: selectedRecipient, relationship: selectedRecipient, occasion: selectedOccasion, interests: selectedInterests, minimum_budget: selectedBudget.min, maximum_budget: selectedBudget.max, query: criteria.query });
       try { 
+        sessionStorage.setItem("giftora_last_search_id", response.search_id);
         sessionStorage.setItem(`giftora_search_${response.search_id}`, JSON.stringify(response.recommendations));
         if (response.visual_inspirations) {
           sessionStorage.setItem(`giftora_visual_${response.search_id}`, JSON.stringify(response.visual_inspirations));

@@ -24,5 +24,7 @@ class AgentWorkflowState(BaseModel):
 
     # Final outputs
     ranked_recommendations: List[Dict[str, Any]] = Field(default_factory=list)
+    visual_inspirations: List[Dict[str, Any]] = Field(default_factory=list)
+    external_ai_destination: Optional[Dict[str, str]] = None
     search_session_id: Optional[str] = None
     error_message: Optional[str] = None

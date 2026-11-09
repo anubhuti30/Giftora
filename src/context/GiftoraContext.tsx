@@ -18,9 +18,9 @@ interface GiftoraContextType {
   isInCompare: (productId: string) => boolean;
   removeFromCompare: (productId: string) => void;
   clearCompare: () => void;
-  addRecipient: (recipient: Omit<Recipient, "id" | "savedGiftCount">) => Recipient;
-  updateRecipient: (recipient: Recipient) => void;
-  deleteRecipient: (id: string) => void;
+  addRecipient: (recipient: Omit<Recipient, "id" | "savedGiftCount">) => Promise<Recipient>;
+  updateRecipient: (recipient: Recipient) => Promise<void>;
+  deleteRecipient: (id: string) => Promise<void>;
   updateSearchCriteria: (criteria: Partial<SearchCriteria>) => void;
   resetSearchCriteria: () => void;
   loginUser: (email: string, password?: string) => Promise<boolean>;
@@ -42,12 +42,33 @@ const defaultSearchCriteria: SearchCriteria = {
 
 const GiftoraContext = createContext<GiftoraContextType | undefined>(undefined);
 
+const toRecipient = (recipient: {
+  id: string; name: string; relationship: string; date_of_birth?: string | null; notes?: string | null;
+  interests?: Array<{ interest_name: string }>;
+}): Recipient => ({
+  id: recipient.id,
+  name: recipient.name,
+  relationship: recipient.relationship,
+  birthday: recipient.date_of_birth || undefined,
+  notes: recipient.notes || undefined,
+  interests: (recipient.interests || []).map((interest) => interest.interest_name),
+  savedGiftCount: 0,
+});
+
 export function GiftoraProvider({ children }: { children: React.ReactNode }) {
   const [wishlist, setWishlist] = useState<Product[]>([]);
   const [compareList, setCompareList] = useState<Product[]>([]);
   const [recipients, setRecipients] = useState<Recipient[]>([]);
   const [activeSearch, setActiveSearch] = useState<SearchCriteria>(defaultSearchCriteria);
   const [user, setUser] = useState<UserProfile | null>(null);
+  const [toast, setToast] = useState<string | null>(null);
+
+  const showToast = (message: string) => {
+    setToast(message);
+    setTimeout(() => {
+      setToast(null);
+    }, 3500);
+  };
 
   // Hydrate client-side state from localStorage cleanly after mount (prevents SSR hydration mismatch)
   useEffect(() => {
@@ -84,6 +105,9 @@ export function GiftoraProvider({ children }: { children: React.ReactNode }) {
               assistantTone: "warm",
             };
             setUser(liveUser);
+            api.getRecipients().then((items) => setRecipients(items.map(toRecipient))).catch(() => {
+              showToast("Your saved recipients could not be loaded.");
+            });
             try {
               localStorage.setItem("giftora_user", JSON.stringify(liveUser));
             } catch {}
@@ -99,15 +123,6 @@ export function GiftoraProvider({ children }: { children: React.ReactNode }) {
       }
     }
   }, []);
-
-  const [toast, setToast] = useState<string | null>(null);
-
-  const showToast = (message: string) => {
-    setToast(message);
-    setTimeout(() => {
-      setToast(null);
-    }, 3500);
-  };
 
   const toggleWishlist = (product: Product) => {
     setWishlist((prev) => {
@@ -186,39 +201,32 @@ export function GiftoraProvider({ children }: { children: React.ReactNode }) {
     showToast("Comparison cleared");
   };
 
-  const addRecipient = (recipientData: Omit<Recipient, "id" | "savedGiftCount">): Recipient => {
-    const newRecipient: Recipient = {
-      ...recipientData,
-      id: `rec-${Date.now()}`,
-      savedGiftCount: 0,
-      avatarUrl:
-        recipientData.avatarUrl ||
-        "https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=300&q=80",
-    };
-    const updated = [newRecipient, ...recipients];
-    setRecipients(updated);
-    try {
-      localStorage.setItem("giftora_recipients", JSON.stringify(updated));
-    } catch {}
+  const addRecipient = async (recipientData: Omit<Recipient, "id" | "savedGiftCount">): Promise<Recipient> => {
+    if (!user) throw new Error("Please sign in before adding a recipient.");
+    const created = await api.createRecipient({
+      name: recipientData.name, relationship: recipientData.relationship, notes: recipientData.notes,
+      interests: recipientData.interests,
+    }) as Parameters<typeof toRecipient>[0];
+    const newRecipient = toRecipient(created);
+    setRecipients((previous) => [newRecipient, ...previous]);
     showToast(`Added "${newRecipient.name}" to your recipients!`);
     return newRecipient;
   };
 
-  const updateRecipient = (updatedRecipient: Recipient) => {
-    const updated = recipients.map((r) => (r.id === updatedRecipient.id ? updatedRecipient : r));
-    setRecipients(updated);
-    try {
-      localStorage.setItem("giftora_recipients", JSON.stringify(updated));
-    } catch {}
+  const updateRecipient = async (updatedRecipient: Recipient) => {
+    if (!user) throw new Error("Please sign in before updating a recipient.");
+    await api.updateRecipient(updatedRecipient.id, {
+      name: updatedRecipient.name, relationship: updatedRecipient.relationship, notes: updatedRecipient.notes,
+      interests: updatedRecipient.interests, date_of_birth: updatedRecipient.birthday || null,
+    });
+    setRecipients((previous) => previous.map((recipient) => recipient.id === updatedRecipient.id ? updatedRecipient : recipient));
     showToast(`Updated "${updatedRecipient.name}"'s profile`);
   };
 
-  const deleteRecipient = (id: string) => {
-    const updated = recipients.filter((r) => r.id !== id);
-    setRecipients(updated);
-    try {
-      localStorage.setItem("giftora_recipients", JSON.stringify(updated));
-    } catch {}
+  const deleteRecipient = async (id: string) => {
+    if (!user) throw new Error("Please sign in before deleting a recipient.");
+    await api.deleteRecipient(id);
+    setRecipients((previous) => previous.filter((recipient) => recipient.id !== id));
     showToast("Recipient removed");
   };
 

@@ -87,7 +87,11 @@ def perform_gift_search(
                 conversation_id=request.conversation_id,
                 occasion=request.occasion or extracted_needs.get("occasion"),
                 original_query=query_text,
-                extracted_preferences=extracted_needs,
+                extracted_preferences={
+                    **(extracted_needs if isinstance(extracted_needs, dict) else {}),
+                    "_visual_inspirations": workflow_result.get("visual_inspirations", []),
+                    "_external_ai_destination": workflow_result.get("external_ai_destination"),
+                },
                 minimum_budget=request.minimum_budget,
                 maximum_budget=request.maximum_budget,
                 search_status="COMPLETED",
@@ -102,11 +106,11 @@ def perform_gift_search(
                 marketplace_name = str(r.get("marketplace_name") or "")
                 marketplace_product_id = str(r.get("product_source_id") or "")
                 title = str(r.get("product_title") or "").strip()
-                product_url = str(r.get("product_url") or "").strip()
+                product_url = str(r.get("product_url") or r.get("retailer_search_url") or "").strip()
                 image_url = str(r.get("image_url") or "").strip()
                 if not all((marketplace_name, marketplace_product_id, title, product_url, image_url)):
                     raise ValueError("Connector returned an incomplete product record")
-                price = Decimal(str(r.get("price")))
+                price = Decimal(str(r.get("price", 0)))
                 if not price.is_finite() or price < 0:
                     raise ValueError("Connector returned an invalid product price")
                 db_source = db.query(ProductSource).filter(
@@ -172,6 +176,8 @@ def perform_gift_search(
         "saved_in_database": saved_in_db,
         "recommendations_count": len(ranked_recs),
         "recommendations": ranked_recs,
+        "visual_inspirations": workflow_result.get("visual_inspirations", []),
+        "external_ai_destination": workflow_result.get("external_ai_destination"),
         "status": "COMPLETED",
         "created_at": datetime.utcnow().isoformat(),
     }
@@ -202,6 +208,8 @@ def get_search_results(
     formatted_recs = []
     for r in recs:
         src = r.product_source
+        p_url = src.product_url if src else "#"
+        is_search = "/s?k=" in p_url or "/search?q=" in p_url or "search" in p_url.lower()
         formatted_recs.append({
             "id": r.id,
             "product_source_id": r.product_source_id,
@@ -210,13 +218,20 @@ def get_search_results(
             "price": float(src.current_price) if src else 0,
             "original_price": float(src.original_price) if src and src.original_price else None,
             "image_url": src.image_url if src else "",
-            "product_url": src.product_url if src else "#",
-            "rating": float(src.source_rating) if src and src.source_rating else 4.5,
-            "review_count": src.source_review_count if src else 50,
+            "product_url": None if is_search else p_url,
+            "retailer_search_url": p_url if is_search else None,
+            "is_search_fallback": is_search,
+            "link_status": "SEARCH_FALLBACK" if is_search else "VERIFIED",
+            "rating": float(src.source_rating) if src and src.source_rating else None,
+            "review_count": src.source_review_count if src and src.source_review_count else None,
             "relevance_score": float(r.relevance_score),
             "ranking_position": r.ranking_position,
             "match_explanation": r.match_explanation,
         })
+
+    prefs = session.extracted_preferences if isinstance(session.extracted_preferences, dict) else {}
+    visual_inspirations = prefs.get("_visual_inspirations", [])
+    external_ai_destination = prefs.get("_external_ai_destination")
 
     return {
         "id": session.id,
@@ -226,6 +241,8 @@ def get_search_results(
         "search_status": session.search_status,
         "created_at": session.created_at.isoformat(),
         "recommendations": formatted_recs,
+        "visual_inspirations": visual_inspirations,
+        "external_ai_destination": external_ai_destination,
     }
 
 

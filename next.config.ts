@@ -1,4 +1,7 @@
+import path from "path";
 import type { NextConfig } from "next";
+
+const normalizedCwd = process.cwd().split(path.sep).join("/");
 
 const nextConfig: NextConfig = {
   /* config options here */
@@ -11,12 +14,17 @@ const nextConfig: NextConfig = {
     ],
   },
   turbopack: {
-    // This repository is nested below another package lockfile on some hosts.
-    // Pinning the root prevents Turbopack from selecting the parent directory.
-    root: process.cwd(),
+    root: normalizedCwd,
     rules: {
       "*.css": {
-        loaders: ["@tailwindcss/turbopack"],
+        loaders: [
+          {
+            loader: "@tailwindcss/turbopack",
+            options: {
+              base: normalizedCwd,
+            },
+          },
+        ],
         as: "*.css",
       },
     },

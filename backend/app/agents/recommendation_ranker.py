@@ -31,8 +31,10 @@ def rank_recommendations_node(state: AgentWorkflowState) -> Dict[str, Any]:
     for scored in scored_candidates:
         orig = candidate_lookup.get(scored.product_source_id, {})
         title = scored.product_title or orig.get("title") or orig.get("product_title") or "Curated Gift"
-        rating = float(orig.get("rating") or orig.get("source_rating") or 4.5)
-        reviews = int(orig.get("review_count") or orig.get("source_review_count") or 50)
+        rating_val = orig.get("rating") or orig.get("source_rating")
+        rating = float(rating_val) if rating_val is not None else None
+        review_val = orig.get("review_count") or orig.get("source_review_count")
+        reviews = int(review_val) if review_val is not None else None
 
         ranked_dicts.append({
             "product_source_id": scored.product_source_id,
@@ -44,7 +46,10 @@ def rank_recommendations_node(state: AgentWorkflowState) -> Dict[str, Any]:
             "source_rating": rating,
             "source_review_count": reviews,
             "image_url": orig.get("image_url", ""),
-            "product_url": orig.get("product_url", "#"),
+            "product_url": orig.get("product_url"),
+            "retailer_search_url": orig.get("retailer_search_url", ""),
+            "link_status": orig.get("link_status", "SEARCH_FALLBACK"),
+            "is_search_fallback": bool(orig.get("is_search_fallback", False)),
             "category": orig.get("category", "Gifts"),
             "brand": orig.get("brand", ""),
             "final_score": scored.final_score,

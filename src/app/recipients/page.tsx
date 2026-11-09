@@ -1,9 +1,9 @@
 "use client";
 
 import React, { useState } from "react";
+import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { SafeImage } from "@/components/ui/SafeImage";
 import { 
   Users, 
   Plus, 
@@ -22,7 +22,7 @@ import { POPULAR_INTEREST_TAGS } from "@/data/mockRecipients";
 
 export default function RecipientsPage() {
   const router = useRouter();
-  const { recipients, addRecipient, updateRecipient, deleteRecipient, updateSearchCriteria } = useGiftora();
+  const { recipients, addRecipient, updateRecipient, deleteRecipient, updateSearchCriteria, showToast } = useGiftora();
 
   // Modal State
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -86,19 +86,23 @@ export default function RecipientsPage() {
     }
   };
 
-  const handleSave = (e: React.FormEvent) => {
+  const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!formData.name.trim()) return;
 
-    if (editingRecipient) {
-      updateRecipient({
-        ...editingRecipient,
-        ...formData,
-      });
-    } else {
-      addRecipient(formData);
+    try {
+      if (editingRecipient) {
+        await updateRecipient({
+          ...editingRecipient,
+          ...formData,
+        });
+      } else {
+        await addRecipient(formData);
+      }
+      setIsModalOpen(false);
+    } catch (error) {
+      showToast(error instanceof Error ? error.message : "Recipient could not be saved.");
     }
-    setIsModalOpen(false);
   };
 
   const handleStartDiscoveryFor = (rec: Recipient) => {
@@ -161,12 +165,11 @@ export default function RecipientsPage() {
                       <div className="flex items-center gap-3.5">
                         <div className="w-12 h-12 rounded-2xl overflow-hidden bg-[#E9DDE7] relative shrink-0 border border-[#E6DDE5]">
                           {rec.avatarUrl ? (
-                            <SafeImage
+                            <Image
                               src={rec.avatarUrl}
                               alt={rec.name}
                               fill
                               className="object-cover"
-                              fallbackSrc="/images/categories/beauty.jpg"
                             />
                           ) : (
                             <div className="w-full h-full flex items-center justify-center text-[#422C42] font-bold text-lg">
@@ -201,7 +204,7 @@ export default function RecipientsPage() {
                           <Edit3 className="w-4 h-4" />
                         </button>
                         <button
-                          onClick={() => deleteRecipient(rec.id)}
+                          onClick={() => { void deleteRecipient(rec.id).catch((error) => showToast(error instanceof Error ? error.message : "Recipient could not be deleted.")); }}
                           title="Delete profile"
                           className="p-2 text-[#8E8691] hover:text-rose-600 hover:bg-rose-50 rounded-xl transition-colors"
                         >

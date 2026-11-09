@@ -106,8 +106,7 @@ export const MOCK_PRODUCTS: Product[] = [
     tags: ["Under ₹500", "Handmade", "Home Décor", "Aromatherapy"],
     occasions: ["Birthday", "Thank You", "Just Because"],
     features: ["100% natural soy wax", "35 hours clean burn", "Hand-poured in small batches", "Reusable amber glass jar"],
-    productUrl: "https://www.etsy.com/in-en/search?q=Handmade+Botanical+Soy+Wax+Scented+Candle",
-    isDemo: true,
+    productUrl: "https://www.etsy.com/sample/botanical-candle",
     valueComparison: {
       pros: ["Zero petroleum paraffin", "Calming un-perfumed scent", "Eco-friendly recyclable packaging"],
       idealFor: "Mindful unwind evenings or thoughtful desk companions",
@@ -133,8 +132,7 @@ export const MOCK_PRODUCTS: Product[] = [
     tags: ["Under ₹500", "Handmade", "Traditional", "Tea & Coffee"],
     occasions: ["Just Because", "Thank You", "Festivals"],
     features: ["Natural clay fired finish", "Lead-free & food safe", "Retains heat naturally", "Includes cork coasters"],
-    productUrl: "https://www.fabindia.com/search?q=Handcrafted+Terracotta+Chai+Kulhad",
-    isDemo: true,
+    productUrl: "https://www.fabindia.com/sample/kulhad-cups",
     valueComparison: {
       pros: ["Authentic earthen aroma", "Empowers traditional artisans", "Highly durable terracotta"],
       idealFor: "Tea enthusiasts who savor mindful morning moments",
@@ -160,8 +158,7 @@ export const MOCK_PRODUCTS: Product[] = [
     tags: ["Under ₹500", "Stationery", "Mindfulness", "Reading & Writing"],
     occasions: ["Graduation", "Birthday", "Just Because"],
     features: ["120 GSM ink-proof paper", "Linen fabric hardbound cover", "Ribbon bookmark & back pocket", "Lays completely flat (180°)"],
-    productUrl: "https://www.amazon.in/s?k=Linen+Bound+Hardcover+Dot+Grid+Pocket+Journal",
-    isDemo: true,
+    productUrl: "https://www.amazon.in/sample/linen-journal",
     valueComparison: {
       pros: ["Zero fountain pen bleed", "Elegant muted sage hue", "Portable pocket size"],
       idealFor: "Writers, designers, and intentional thinkers",
@@ -189,8 +186,7 @@ export const MOCK_PRODUCTS: Product[] = [
     tags: ["Thoughtful for Her", "Silk", "Wellness", "Self-Care"],
     occasions: ["Birthday", "Anniversary", "Just Because"],
     features: ["22 Momme grade 6A mulberry silk", "Hypoallergenic & frictionless", "Includes travel pouch", "Gentle covered elastic strap"],
-    productUrl: "https://luxury.tatacliq.com/search/?searchCategory=all&text=Pure+Mulberry+Silk+Sleep+Mask",
-    isDemo: true,
+    productUrl: "https://luxury.tatacliq.com/sample/silk-sleep-set",
     valueComparison: {
       pros: ["Reduces facial sleep creases", "Natural cooling temperature regulation", "Exquisite magnetic gift packaging"],
       idealFor: "Anyone who appreciates restorative rest and gentle self-care",
@@ -216,8 +212,7 @@ export const MOCK_PRODUCTS: Product[] = [
     tags: ["Thoughtful for Her", "Luxury Ayurvedic", "Festivals", "Skincare"],
     occasions: ["Festivals", "Anniversary", "Birthday"],
     features: ["Soundarya serum & radiance cream", "Real 24K Gold particles", "Pure cold-pressed herb oils", "Embossed royal keepsake box"],
-    productUrl: "https://www.forestessentialsindia.com/catalogsearch/result/?q=Soundarya+Radiance+Ritual",
-    isDemo: true,
+    productUrl: "https://www.forestessentialsindia.com/sample/soundarya-ritual",
     valueComparison: {
       pros: ["Heritage royal recipe", "Intoxicating subtle saffron fragrance", "Ready-to-gift heirloom packaging"],
       idealFor: "Celebrating milestones and pampering someone who gives so much to others",
@@ -243,8 +238,7 @@ export const MOCK_PRODUCTS: Product[] = [
     tags: ["Thoughtful for Her", "Ceramics", "Modern Indian", "Home Décor"],
     occasions: ["Anniversary", "Thank You", "Birthday"],
     features: ["High-fired durable stoneware", "Drip-free precision spout", "Cast brass ergonomic handle", "850ml capacity"],
-    productUrl: "https://www.nicobar.com/search?q=Hand+Glazed+Stoneware+Teapot",
-    isDemo: true,
+    productUrl: "https://www.nicobar.com/sample/stoneware-pot",
     valueComparison: {
       pros: ["Architectural silhouette", "Retains heat without scorching", "Designed in Delhi, made by master potters"],
       idealFor: "Hosts and design lovers with an eye for understated grace",
@@ -272,8 +266,7 @@ export const MOCK_PRODUCTS: Product[] = [
     tags: ["Tech Lovers", "Desk Setup", "Wireless", "Minimalist"],
     occasions: ["Birthday", "Graduation", "Just Because"],
     features: ["Fast 15W MagSafe magnetic alignment", "Charges iPhone & AirPods simultaneously", "Heavy weighted non-slip base", "Hidden braided nylon cable"],
-    productUrl: "https://www.amazon.in/s?k=Walnut+Wood+MagSafe+Wireless+Charging+Stand",
-    isDemo: true,
+    productUrl: "https://www.amazon.in/sample/walnut-charger",
     valueComparison: {
       pros: ["Real sustainably sourced walnut", "Zero unsightly plastic glare", "One-hand snap and release"],
       idealFor: "Minimalist desk enthusiasts and Apple ecosystem users",
@@ -299,8 +292,7 @@ export const MOCK_PRODUCTS: Product[] = [
     tags: ["Tech Lovers", "Audio", "Music", "Premium Tech"],
     occasions: ["Birthday", "Anniversary", "Graduation"],
     features: ["30+ hours of portable playtime", "IP67 dust & water resistance", "Multi-directional control knob", "Stack mode pairing"],
-    productUrl: "https://luxury.tatacliq.com/search/?searchCategory=all&text=Marshall+Emberton+II+Bluetooth+Speaker",
-    isDemo: true,
+    productUrl: "https://luxury.tatacliq.com/sample/marshall-emberton",
     valueComparison: {
       pros: ["Iconic rock-and-roll styling", "Room-filling spatial acoustic tuning", "Pocketable yet rugged"],
       idealFor: "Audiophiles and music obsessives on the move",
@@ -326,8 +318,7 @@ export const MOCK_PRODUCTS: Product[] = [
     tags: ["Tech Lovers", "Productivity", "Mechanical Keyboard", "Coding & Writing"],
     occasions: ["Graduation", "Birthday", "Just Because"],
     features: ["Hot-swappable Gateron G Pro switches", "Mac/Windows switchable layout", "Connects up to 3 devices", "4000mAh long-lasting battery"],
-    productUrl: "https://www.amazon.in/s?k=Keychron+K2+Wireless+Mechanical+Keyboard",
-    isDemo: true,
+    productUrl: "https://www.amazon.in/sample/keychron-k2",
     valueComparison: {
       pros: ["Pleasing tactile bounce", "Solid aluminum frame construction", "Essential productivity upgrade"],
       idealFor: "Engineers, copywriters, and remote work champions",
@@ -355,8 +346,7 @@ export const MOCK_PRODUCTS: Product[] = [
     tags: ["Unique for Special", "Personalized", "Romantic", "Memories"],
     occasions: ["Anniversary", "Birthday", "Just Because"],
     features: ["Mathematically accurate NASA sky database alignment", "Optical grade crystal acrylic", "Solid beechwood LED light base", "Custom message engraving"],
-    productUrl: "https://www.etsy.com/in-en/search?q=Personalized+Custom+Star+Map+Constellation+Acrylic",
-    isDemo: true,
+    productUrl: "https://www.etsy.com/sample/star-map-acrylic",
     valueComparison: {
       pros: ["Deep emotional resonance", "Doubles as ambient nighttime illumination", "Zero generic feeling"],
       idealFor: "Romantic partners, lifelong friends, or parents commemorating a birth",
@@ -382,8 +372,7 @@ export const MOCK_PRODUCTS: Product[] = [
     tags: ["Unique for Special", "Coffee Lovers", "Artisan", "Aesthetics"],
     occasions: ["Anniversary", "Thank You", "Birthday"],
     features: ["Solid brass hand-bent arm", "Tempered borosilicate glass decanter", "Adjustable height for cups & carafes", "Includes specialty roast beans sample"],
-    productUrl: "https://www.nicobar.com/search?q=Brass+Glass+Coffee+Pour+Over+Stand",
-    isDemo: true,
+    productUrl: "https://www.nicobar.com/sample/coffee-stand",
     valueComparison: {
       pros: ["Sculptural statement piece on countertop", "Consistent extraction temperature", "Durable lifetime brass"],
       idealFor: "Slow living advocates and discerning coffee craftspeople",
@@ -409,8 +398,7 @@ export const MOCK_PRODUCTS: Product[] = [
     tags: ["Unique for Special", "Heirloom", "Pashmina", "Festivals", "Luxury"],
     occasions: ["Anniversary", "Festivals", "Birthday"],
     features: ["GI tagged Kashmiri Pashmina certificate", "Hand-done metallic Zari Tilla embroidery", "Featherlight warmth (under 200 grams)", "Hand-signed artisan weaver seal"],
-    productUrl: "https://luxury.tatacliq.com/search/?searchCategory=all&text=Hand+Spun+Pure+Pashmina+Shawl",
-    isDemo: true,
+    productUrl: "https://luxury.tatacliq.com/sample/pashmina-shawl",
     valueComparison: {
       pros: ["Generational heirloom asset", "Unrivaled thermal softness", "Fair-trade artisan direct compensation"],
       idealFor: "Mothers, partners, or grand occasions where ordinary gifts fall short",
@@ -438,8 +426,7 @@ export const MOCK_PRODUCTS: Product[] = [
     tags: ["Gourmet", "Under ₹2500", "Foodie", "Thoughtful"],
     occasions: ["Thank You", "Birthday", "Festivals", "Just Because"],
     features: ["Bean-to-bar craftsmanship", "Cane sugar only, zero palm oil", "Includes flavor tasting wheel", "Ethically certified farms"],
-    productUrl: "https://www.amazon.in/s?k=Artisanal+Single+Origin+Dark+Chocolate+Box",
-    isDemo: true,
+    productUrl: "https://www.amazon.in/sample/dark-chocolate-box",
     valueComparison: {
       pros: ["Delightful sensory voyage", "Beautiful illustrated book packaging", "Vegan and gluten-free"],
       idealFor: "Sweet-toothed epicures and thoughtful hosts",
@@ -464,8 +451,7 @@ export const MOCK_PRODUCTS: Product[] = [
     tags: ["Photography", "Creative", "Memories", "Popular"],
     occasions: ["Birthday", "Graduation", "Anniversary"],
     features: ["Automatic exposure adjustment", "Built-in selfie mirror and close-up lens", "Instant credit-card sized printouts", "Includes pack of 20 film sheets"],
-    productUrl: "https://www.amazon.in/s?k=FujiFilm+Instax+Mini+12+Camera",
-    isDemo: true,
+    productUrl: "https://www.amazon.in/sample/instax-mini-12",
     valueComparison: {
       pros: ["Instant tactile nostalgic joy", "Gorgeous pastel mauve/lilac body", "Loved by all age groups"],
       idealFor: "Memory keepers, travelers, and scrapbook creators",
@@ -490,8 +476,7 @@ export const MOCK_PRODUCTS: Product[] = [
     tags: ["Plant Lover", "Wellness", "Home Décor", "Under ₹2500"],
     occasions: ["Just Because", "Thank You", "Birthday"],
     features: ["Breathable ceramic drainage planter", "Includes Basil, Mint & Coriander seeds", "Vintage mist spray pump", "Organic compressed soil discs"],
-    productUrl: "https://www.etsy.com/in-en/search?q=Botanical+Herb+Garden+Indoor+Planter",
-    isDemo: true,
+    productUrl: "https://www.etsy.com/sample/indoor-herb-planter",
     valueComparison: {
       pros: ["Therapeutic daily ritual", "Living green gift that keeps growing", "Compact kitchen sill footprint"],
       idealFor: "Home cooks, plant parents, and city dwellers craving nature",

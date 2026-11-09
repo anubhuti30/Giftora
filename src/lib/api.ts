@@ -118,7 +118,9 @@ class GiftoraApiClient {
       query: string;
       extracted_needs: Record<string, unknown>;
       recommendations_count: number;
-      recommendations: unknown[];
+      recommendations: any[];
+      visual_inspirations?: any[];
+      external_ai_destination?: any;
     }>("/api/v1/search/gift-search", {
       method: "POST",
       body: JSON.stringify(params),
@@ -136,12 +138,18 @@ class GiftoraApiClient {
         price: number;
         original_price?: number | null;
         image_url: string;
-        product_url: string;
+        product_url?: string | null;
+        retailer_search_url?: string;
+        link_status?: "VERIFIED" | "INCONCLUSIVE" | "INVALID" | "SEARCH_FALLBACK";
+        is_search_fallback?: boolean;
         rating?: number | null;
         review_count?: number | null;
         relevance_score: number;
         match_explanation: string;
+        category?: string;
       }>;
+      visual_inspirations?: any[];
+      external_ai_destination?: any;
     }>(`/api/v1/search/${encodeURIComponent(searchId)}`);
   }
 
@@ -177,12 +185,19 @@ class GiftoraApiClient {
 
   // Recipients
   async getRecipients() {
-    return this.request<unknown[]>("/api/v1/recipients");
+    return this.request<Array<{
+      id: string;
+      name: string;
+      relationship: string;
+      date_of_birth?: string | null;
+      notes?: string | null;
+      interests?: Array<{ interest_name: string }>;
+    }>>("/api/v1/recipients");
   }
 
   async createRecipient(data: {
     name: string;
-    relationship_type: string;
+    relationship: string;
     notes?: string;
     interests?: string[];
     minimum_budget?: number;
@@ -190,6 +205,19 @@ class GiftoraApiClient {
   }) {
     return this.request<unknown>("/api/v1/recipients", {
       method: "POST",
+      body: JSON.stringify(data),
+    });
+  }
+
+  async updateRecipient(id: string, data: {
+    name?: string;
+    relationship?: string;
+    date_of_birth?: string | null;
+    notes?: string;
+    interests?: string[];
+  }) {
+    return this.request<unknown>(`/api/v1/recipients/${encodeURIComponent(id)}`, {
+      method: "PATCH",
       body: JSON.stringify(data),
     });
   }

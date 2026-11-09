@@ -72,8 +72,7 @@ function DiscoverContent() {
   const [isThinking, setIsThinking] = useState(false);
   const [isSearching, setIsSearching] = useState(false);
   const [conversationId, setConversationId] = useState<string | null>(null);
-
-  const [selectedRecipient, setSelectedRecipient] = useState(recipientParam || activeSearch.recipientName || "Sister");
+  const [selectedRecipient, setSelectedRecipient] = useState(recipientParam || activeSearch.recipientName || "Pooja");
   const [selectedOccasion, setSelectedOccasion] = useState(occasionParam || activeSearch.occasion || "Birthday");
   const [selectedInterests, setSelectedInterests] = useState<string[]>(activeSearch.interests || ["Ceramics & Pottery", "Aromatherapy & Candles"]);
   const [selectedBudget, setSelectedBudget] = useState(activeSearch.budgetRange || { min: 500, max: 2500 });
@@ -101,92 +100,36 @@ function DiscoverContent() {
     setIsThinking(true);
 
     try {
-      // Build history for multi-turn conversational context
-      const history = messages.slice(-6).map((m) => ({
-        role: m.sender === "user" ? "user" : "assistant",
-        content: m.text,
-      }));
+      const history = messages.slice(-6).map((message) => ({ role: message.sender === "user" ? "user" : "assistant", content: message.text }));
       history.push({ role: "user", content: textToSend });
-
-      const res = await api.sendChatMessage(
-        textToSend,
-        conversationId || undefined,
-        undefined,
-        history
-      );
-
-      if (res.conversation_id) {
-        setConversationId(res.conversation_id);
+      const response = await api.sendChatMessage(textToSend, conversationId || undefined, undefined, history);
+      if (response.conversation_id) setConversationId(response.conversation_id);
+      const needs = response.extracted_needs as { relationship?: string; occasion?: string; interests?: string[]; minimum_budget?: number; maximum_budget?: number } | undefined;
+      if (needs?.relationship) setSelectedRecipient(needs.relationship);
+      if (needs?.occasion) setSelectedOccasion(needs.occasion);
+      if (needs?.interests?.length) setSelectedInterests((previous) => Array.from(new Set([...previous, ...needs.interests!])));
+      if (typeof needs?.minimum_budget === "number" || typeof needs?.maximum_budget === "number") {
+        setSelectedBudget((previous) => ({ min: needs.minimum_budget ?? previous.min, max: needs.maximum_budget ?? previous.max }));
       }
-
-      // Synchronize extracted profiling back into active search and UI state
-      if (res.extracted_needs) {
-        const needs = res.extracted_needs as {
-          recipient_name?: string;
-          relationship?: string;
-          occasion?: string;
-          interests?: string[];
-          minimum_budget?: number;
-          maximum_budget?: number;
-        };
-
-        if (needs.relationship) {
-          setSelectedRecipient(needs.relationship);
-        } else if (needs.recipient_name) {
-          setSelectedRecipient(needs.recipient_name);
-        }
-
-        if (needs.occasion) {
-          setSelectedOccasion(needs.occasion);
-        }
-
-        if (Array.isArray(needs.interests) && needs.interests.length > 0) {
-          setSelectedInterests((prev) => {
-            const combined = Array.from(new Set([...prev, ...needs.interests!]));
-            return combined;
-          });
-        }
-
-        if (typeof needs.minimum_budget === "number" || typeof needs.maximum_budget === "number") {
-          setSelectedBudget((prev) => ({
-            min: typeof needs.minimum_budget === "number" ? needs.minimum_budget : prev.min,
-            max: typeof needs.maximum_budget === "number" ? needs.maximum_budget : prev.max,
-          }));
-        }
-      }
-
-      const replyText =
-        res.reply_message?.message_content ||
-        "I've noted that! What other specific details or aesthetics would they love?";
-
-      const quickReplies = res.suggested_quick_replies || [];
-
-      setMessages((prev) => [
-        ...prev,
-        {
-          id: res.reply_message?.id || `ai-${Date.now()}`,
-          sender: "assistant",
-          text: replyText,
-          timestamp: "Just now",
-          quickReplies: quickReplies.length > 0 ? quickReplies : undefined,
-        },
-      ]);
-    } catch (err: unknown) {
-      console.warn("Real chat endpoint fallback:", err);
-      setMessages((prev) => [
-        ...prev,
-        {
-          id: `ai-${Date.now()}`,
-          sender: "assistant",
-          text: "I've noted that! Select from the curated options below or tell me about their personal style to refine recommendations.",
-          timestamp: "Just now",
-          quickReplies: ["Under ₹1,500", "Under ₹3,000", "Handmade & Artisanal", "Minimalist Modern"],
-        },
-      ]);
+      setMessages((previous) => [...previous, {
+        id: response.reply_message?.id || `ai-${Date.now()}`,
+        sender: "assistant",
+        text: response.reply_message?.message_content || "Tell me a little more about their interests or preferred budget.",
+        timestamp: "Just now",
+        step: "interests",
+        quickReplies: response.suggested_quick_replies,
+      }]);
+    } catch {
+      setMessages((previous) => [...previous, {
+        id: `ai-error-${Date.now()}`,
+        sender: "assistant",
+        text: "I couldn't reach the gifting assistant right now. Please try again in a moment.",
+        timestamp: "Just now",
+      }]);
     } finally {
       setIsThinking(false);
     }
-  }, [inputMessage, messages, conversationId]);
+  }, [conversationId, inputMessage, messages]);
 
   const toggleInterest = (tag: string) => {
     setSelectedInterests((prev) =>
@@ -195,39 +138,29 @@ function DiscoverContent() {
   };
 
   const handleLaunchResults = async () => {
-    setIsSearching(true);
-    const searchPayload = {
+    const criteria = {
       recipientName: selectedRecipient,
       relationship: selectedRecipient,
       occasion: selectedOccasion,
       interests: selectedInterests,
       budgetRange: selectedBudget,
       age: recipientAge,
-      query: inputMessage || `Gifts for ${selectedRecipient} on ${selectedOccasion}`,
+      query: inputMessage || `Gifts for ${selectedRecipient}`,
     };
-    updateSearchCriteria(searchPayload);
-
+    updateSearchCriteria(criteria);
+    setIsSearching(true);
     try {
-      const res = await api.searchGifts({
-        recipient_name: selectedRecipient,
-        relationship: selectedRecipient,
-        occasion: selectedOccasion,
-        interests: selectedInterests,
-        minimum_budget: selectedBudget.min,
-        maximum_budget: selectedBudget.max,
-        query: searchPayload.query,
-      });
-
-      if (res?.search_id) {
-        // Guest searches are intentionally not persisted server-side. Preserve the
-        // exact API response for the results route instead of substituting mock data.
-        try {
-          sessionStorage.setItem(`giftora_search_${res.search_id}`, JSON.stringify(res.recommendations));
-        } catch {}
-        router.push(`/discover/results?search_id=${res.search_id}`);
-      } else {
-        router.push("/discover/results");
-      }
+      const response = await api.searchGifts({ recipient_name: selectedRecipient, relationship: selectedRecipient, occasion: selectedOccasion, interests: selectedInterests, minimum_budget: selectedBudget.min, maximum_budget: selectedBudget.max, query: criteria.query });
+      try { 
+        sessionStorage.setItem(`giftora_search_${response.search_id}`, JSON.stringify(response.recommendations));
+        if (response.visual_inspirations) {
+          sessionStorage.setItem(`giftora_visual_${response.search_id}`, JSON.stringify(response.visual_inspirations));
+        }
+        if (response.external_ai_destination) {
+          sessionStorage.setItem(`giftora_ai_dest_${response.search_id}`, JSON.stringify(response.external_ai_destination));
+        }
+      } catch {}
+      router.push(`/discover/results?search_id=${encodeURIComponent(response.search_id)}`);
     } catch {
       router.push("/discover/results");
     } finally {
@@ -350,22 +283,6 @@ function DiscoverContent() {
                       {msg.timestamp}
                     </span>
                   </div>
-
-                  {/* Quick Reply Pills */}
-                  {msg.quickReplies && msg.quickReplies.length > 0 && (
-                    <div className="flex flex-wrap gap-1.5 pt-1">
-                      {msg.quickReplies.map((qr) => (
-                        <button
-                          key={qr}
-                          type="button"
-                          onClick={() => handleUserSendMessage(qr)}
-                          className="px-3 py-1.5 rounded-full text-xs font-medium bg-white hover:bg-[#FAF8F5] text-[#422C42] border border-[#E6DDE5] shadow-2xs hover:border-[#9B668B] transition-all text-left"
-                        >
-                          {qr}
-                        </button>
-                      ))}
-                    </div>
-                  )}
 
                   {/* Interactive Progressive Disclosure Controls */}
                   {msg.sender === "assistant" && (
@@ -511,19 +428,9 @@ function DiscoverContent() {
                           type="button"
                           onClick={handleLaunchResults}
                           disabled={isSearching}
-                          className="inline-flex items-center gap-2 bg-[#422C42] hover:bg-[#9B668B] disabled:opacity-75 text-white px-5 py-2.5 rounded-xl text-xs font-semibold shadow-soft transition-all active:scale-95"
+                          className="inline-flex items-center gap-2 bg-[#422C42] hover:bg-[#9B668B] text-white px-5 py-2.5 rounded-xl text-xs font-semibold shadow-soft transition-all active:scale-95"
                         >
-                          {isSearching ? (
-                            <>
-                              <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                              <span>Searching Marketplaces...</span>
-                            </>
-                          ) : (
-                            <>
-                              <span>Discover Matched Gifts</span>
-                              <ArrowRight className="w-3.5 h-3.5" />
-                            </>
-                          )}
+                          {isSearching ? <><Loader2 className="w-3.5 h-3.5 animate-spin" /><span>Searching...</span></> : <><span>Discover Matched Gifts</span><ArrowRight className="w-3.5 h-3.5" /></>}
                         </button>
                       </div>
 

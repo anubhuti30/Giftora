@@ -12,11 +12,21 @@ class ConnectorStatus(str, Enum):
     RATE_LIMITED = "RATE_LIMITED"
 
 
+class LinkStatus(str, Enum):
+    VERIFIED = "VERIFIED"
+    INCONCLUSIVE = "INCONCLUSIVE"
+    INVALID = "INVALID"
+    SEARCH_FALLBACK = "SEARCH_FALLBACK"
+
+
 class MarketplaceProductItem(BaseModel):
     marketplace_name: str
     marketplace_product_id: str
     title: str
-    product_url: str
+    product_url: Optional[str] = None
+    retailer_search_url: str = ""
+    link_status: LinkStatus = LinkStatus.SEARCH_FALLBACK
+    is_search_fallback: bool = True
     image_url: str
     current_price: Decimal
     original_price: Optional[Decimal] = None

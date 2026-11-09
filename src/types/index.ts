@@ -2,11 +2,13 @@ export type MarketplaceSource =
   | "Etsy"
   | "Tata CLiQ Luxury"
   | "Amazon India"
+  | "Flipkart"
+  | "Myntra"
   | "Fabindia"
   | "Nicobar"
   | "Forest Essentials"
-  | "Myntra"
-  | "Nykaa";
+  | "Nykaa"
+  | string;
 
 export interface ProductValueComparison {
   pros: string[];
@@ -24,18 +26,39 @@ export interface Product {
   currency: string;
   source: MarketplaceSource;
   category: string;
-  rating: number;
-  reviewCount: number;
+  rating?: number | null;
+  reviewCount?: number | null;
   imageUrl: string;
   aiMatchReason: string;
   matchScore: number;
   tags: string[];
   occasions: string[];
   features: string[];
-  productUrl: string;
+  productUrl?: string | null;
+  retailerSearchUrl?: string;
+  linkStatus?: "VERIFIED" | "INCONCLUSIVE" | "INVALID" | "SEARCH_FALLBACK";
+  isSearchFallback?: boolean;
   valueComparison: ProductValueComparison;
   isCuratedFavorite?: boolean;
-  isDemo?: boolean;
+}
+
+export interface InspirationItem {
+  id: string;
+  title: string;
+  description: string;
+  inspiration_url: string;
+  image_url: string;
+  tags: string[];
+  source: string;
+  is_inspiration?: boolean;
+}
+
+export interface ExternalAiDestination {
+  provider: string;
+  title: string;
+  description: string;
+  destination_url: string;
+  is_retailer: boolean;
 }
 
 export interface Recipient {

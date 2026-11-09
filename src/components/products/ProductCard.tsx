@@ -1,6 +1,7 @@
 "use client";
 
-import React from "react";
+import React, { useState } from "react";
+import Image from "next/image";
 import { 
   Heart, 
   Layers, 
@@ -12,7 +13,6 @@ import {
 import { Product } from "@/types";
 import { formatPriceINR } from "@/lib/utils";
 import { useGiftora } from "@/context/GiftoraContext";
-import { SafeImage } from "@/components/ui/SafeImage";
 
 interface ProductCardProps {
   product: Product;
@@ -20,25 +20,10 @@ interface ProductCardProps {
 
 export function ProductCard({ product }: ProductCardProps) {
   const { toggleWishlist, isInWishlist, toggleCompare, isInCompare } = useGiftora();
+  const [imgSrc, setImgSrc] = useState(product.imageUrl);
 
   const isFavorited = isInWishlist(product.id);
   const isCompared = isInCompare(product.id);
-
-  const getResolvedUrl = (p: Product) => {
-    if (p.productUrl && !p.productUrl.includes("/sample/")) {
-      return p.productUrl;
-    }
-    const query = encodeURIComponent(p.title);
-    if (p.source === "Amazon India") return `https://www.amazon.in/s?k=${query}`;
-    if (p.source === "Etsy") return `https://www.etsy.com/in-en/search?q=${query}`;
-    if (p.source === "Tata CLiQ Luxury") return `https://luxury.tatacliq.com/search/?searchCategory=all&text=${query}`;
-    if (p.source === "Fabindia") return `https://www.fabindia.com/search?q=${query}`;
-    if (p.source === "Nicobar") return `https://www.nicobar.com/search?q=${query}`;
-    if (p.source === "Forest Essentials") return `https://www.forestessentialsindia.com/catalogsearch/result/?q=${query}`;
-    return `https://www.google.com/search?q=${encodeURIComponent(`${p.title} ${p.source}`)}`;
-  };
-
-  const resolvedUrl = getResolvedUrl(product);
 
   const getSourceBadgeClass = (source: string) => {
     switch (source) {
@@ -47,7 +32,12 @@ export function ProductCard({ product }: ProductCardProps) {
       case "Etsy":
         return "bg-[#F75A22]/10 text-[#C43806] border-[#F75A22]/20";
       case "Amazon India":
+      case "Amazon":
         return "bg-amber-50 text-amber-900 border-amber-200";
+      case "Flipkart":
+        return "bg-blue-50 text-blue-900 border-blue-200";
+      case "Myntra":
+        return "bg-pink-50 text-pink-900 border-pink-200";
       case "Fabindia":
         return "bg-rose-50 text-[#834E74] border-rose-200";
       case "Nicobar":
@@ -59,28 +49,46 @@ export function ProductCard({ product }: ProductCardProps) {
     }
   };
 
+  const isVerifiedProduct = product.linkStatus === "VERIFIED" && Boolean(product.productUrl);
+  const destinationUrl = isVerifiedProduct 
+    ? (product.productUrl || "") 
+    : (product.retailerSearchUrl || product.productUrl || "");
+
+  const buttonLabel = isVerifiedProduct 
+    ? "View Product" 
+    : `Search on ${product.source.replace(" India", "")}`;
+
   return (
     <div className="group relative bg-white rounded-2xl border border-[#E6DDE5] overflow-hidden flex flex-col shadow-soft hover:shadow-card hover:border-[#9B668B]/40 transition-all duration-300">
       
       {/* Top Media Container */}
       <div className="relative aspect-[4/3] w-full bg-[#FAF8F5] overflow-hidden">
-        <SafeImage
-          src={product.imageUrl}
+        <Image
+          src={imgSrc}
           alt={product.title}
           fill
           sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
           className="object-cover group-hover:scale-105 transition-transform duration-500"
-          fallbackSrc="/images/hero/luxury_gift_hero.jpg"
+          onError={() => {
+            // Local verified fallback image
+            setImgSrc("/images/hero/luxury_gift_hero.jpg");
+          }}
         />
 
-        {/* Source Marketplace Pill & DEMO Tag */}
+        {/* Source Marketplace Pill & Honest Verification Tag */}
         <div className="absolute top-3 left-3 z-10 flex items-center gap-1.5">
           <span className={`text-[11px] font-semibold tracking-wide px-2.5 py-1 rounded-full border shadow-xs ${getSourceBadgeClass(product.source)}`}>
             {product.source}
           </span>
-          <span className="text-[10px] font-bold tracking-wider px-2 py-0.5 rounded-full bg-[#422C42]/80 backdrop-blur-xs text-[#FAF8F5] border border-white/20">
-            DEMO
-          </span>
+          {product.isSearchFallback ? (
+            <span className="text-[10px] font-medium tracking-wider px-2 py-0.5 rounded-full bg-amber-500/15 backdrop-blur-xs text-amber-900 border border-amber-300/40">
+              Retailer Search
+            </span>
+          ) : isVerifiedProduct ? (
+            <span className="text-[10px] font-medium tracking-wider px-2 py-0.5 rounded-full bg-emerald-500/15 backdrop-blur-xs text-emerald-900 border border-emerald-300/40">
+              Verified
+            </span>
+          ) : null}
         </div>
 
         {/* Action Buttons Overlay (Wishlist + Compare) */}
@@ -136,11 +144,15 @@ export function ProductCard({ product }: ProductCardProps) {
             <span className="uppercase tracking-wider font-semibold text-[10px] text-[#9B668B]">
               {product.category}
             </span>
-            <div className="flex items-center gap-1 font-medium text-[#29252A]">
-              <Star className="w-3.5 h-3.5 fill-amber-400 text-amber-400" />
-              <span>{product.rating.toFixed(1)}</span>
-              <span className="text-[#8E8691]">({product.reviewCount})</span>
-            </div>
+            {product.rating != null && product.rating > 0 && (
+              <div className="flex items-center gap-1 font-medium text-[#29252A]">
+                <Star className="w-3.5 h-3.5 fill-amber-400 text-amber-400" />
+                <span>{product.rating.toFixed(1)}</span>
+                {product.reviewCount != null && product.reviewCount > 0 && (
+                  <span className="text-[#8E8691]">({product.reviewCount})</span>
+                )}
+              </div>
+            )}
           </div>
 
           {/* Title */}
@@ -202,15 +214,21 @@ export function ProductCard({ product }: ProductCardProps) {
           </button>
 
           {/* External Marketplace Link */}
-          <a
-            href={resolvedUrl}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="inline-flex items-center gap-1.5 text-xs font-semibold text-[#422C42] hover:text-[#9B668B] bg-[#F4EEF3] hover:bg-[#E9DDE7] px-3 py-1.5 rounded-lg transition-colors"
-          >
-            <span>View on {product.source}</span>
-            <ExternalLink className="w-3 h-3" />
-          </a>
+          {destinationUrl ? (
+            <a
+              href={destinationUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-1.5 text-xs font-semibold text-[#422C42] hover:text-[#9B668B] bg-[#F4EEF3] hover:bg-[#E9DDE7] px-3 py-1.5 rounded-lg transition-colors"
+            >
+              <span>{buttonLabel}</span>
+              <ExternalLink className="w-3 h-3" />
+            </a>
+          ) : (
+            <span className="inline-flex items-center text-xs font-medium text-[#8E8691] bg-gray-100 px-3 py-1.5 rounded-lg cursor-not-allowed">
+              Retailer link unavailable
+            </span>
+          )}
         </div>
       </div>
     </div>

@@ -36,7 +36,7 @@ class SearchSession(Base):
     __tablename__ = "search_sessions"
 
     id = Column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
-    user_id = Column(String(36), ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
+    user_id = Column(String(36), ForeignKey("users.id", ondelete="CASCADE"), nullable=True, index=True)
     recipient_id = Column(String(36), ForeignKey("recipients.id", ondelete="SET NULL"), nullable=True, index=True)
     conversation_id = Column(String(36), ForeignKey("conversations.id", ondelete="SET NULL"), nullable=True)
     occasion = Column(String(100), nullable=True)

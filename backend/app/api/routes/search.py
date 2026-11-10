@@ -18,6 +18,16 @@ router = APIRouter(prefix="/search", tags=["Gift Search & Recommendations"])
 logger = logging.getLogger("giftora.search")
 
 
+def _to_json_safe(obj: Any) -> Any:
+    if isinstance(obj, Decimal):
+        return float(obj)
+    if isinstance(obj, dict):
+        return {str(k): _to_json_safe(v) for k, v in obj.items()}
+    if isinstance(obj, (list, tuple, set)):
+        return [_to_json_safe(x) for x in obj]
+    return obj
+
+
 @router.post("", response_model=Dict[str, Any])
 @router.post("/gift-search", response_model=Dict[str, Any])
 def perform_gift_search(
@@ -76,93 +86,91 @@ def perform_gift_search(
 
     session_id = str(uuid.uuid4())
 
-    # Authenticated searches are persisted atomically with their product-source snapshots.
+    # Searches are persisted atomically with their product-source snapshots.
     saved_in_db = False
-    if current_user:
-        try:
-            db_session = SearchSession(
-                id=session_id,
-                user_id=current_user.id,
-                recipient_id=request.recipient_id,
-                conversation_id=request.conversation_id,
-                occasion=request.occasion or extracted_needs.get("occasion"),
-                original_query=query_text,
-                extracted_preferences=extracted_needs if isinstance(extracted_needs, dict) else {},
-                minimum_budget=request.minimum_budget,
-                maximum_budget=request.maximum_budget,
-                search_status="COMPLETED",
-                completed_at=datetime.utcnow(),
-            )
-            db.add(db_session)
-            db.flush()
+    try:
+        db_session = SearchSession(
+            id=session_id,
+            user_id=current_user.id if current_user else None,
+            recipient_id=request.recipient_id if current_user else None,
+            conversation_id=request.conversation_id if current_user else None,
+            occasion=request.occasion or extracted_needs.get("occasion"),
+            original_query=query_text,
+            extracted_preferences=_to_json_safe(extracted_needs) if isinstance(extracted_needs, dict) else {},
+            minimum_budget=request.minimum_budget,
+            maximum_budget=request.maximum_budget,
+            search_status="COMPLETED",
+            completed_at=datetime.utcnow(),
+        )
+        db.add(db_session)
+        db.flush()
 
-            # Upsert each normalized marketplace source by its provider identity. A source's
-            # database UUID—not a transient connector identifier—is returned to the frontend.
-            for r in ranked_recs:
-                marketplace_name = str(r.get("marketplace_name") or "")
-                marketplace_product_id = str(r.get("product_source_id") or "")
-                title = str(r.get("product_title") or "").strip()
-                product_url = str(r.get("product_url") or r.get("retailer_search_url") or "").strip()
-                image_url = str(r.get("image_url") or "").strip()
-                if not all((marketplace_name, marketplace_product_id, title, product_url, image_url)):
-                    raise ValueError("Connector returned an incomplete product record")
-                price = Decimal(str(r.get("price", 0)))
-                if not price.is_finite() or price < 0:
-                    raise ValueError("Connector returned an invalid product price")
-                db_source = db.query(ProductSource).filter(
-                    ProductSource.marketplace_name == marketplace_name,
-                    ProductSource.marketplace_product_id == marketplace_product_id,
-                ).first()
-                if not db_source:
-                    prod = Product(
-                        canonical_name=title,
-                        brand=str(r.get("brand") or "") or None,
-                        category=str(r.get("category") or "General"),
-                        image_url=image_url,
-                    )
-                    db.add(prod)
-                    db.flush()
-                    db_source = ProductSource(
-                        product_id=prod.id,
-                        marketplace_name=marketplace_name,
-                        marketplace_product_id=marketplace_product_id,
-                        product_title=title,
-                        product_url=product_url,
-                        image_url=image_url,
-                        current_price=price,
-                        original_price=Decimal(str(r.get("original_price"))) if r.get("original_price") else None,
-                        currency="INR",
-                        availability_status=str(r.get("availability_status") or "IN_STOCK"),
-                        source_rating=Decimal(str(r.get("source_rating"))) if r.get("source_rating") is not None else None,
-                        source_review_count=int(r["source_review_count"]) if r.get("source_review_count") is not None else None,
-                    )
-                    db.add(db_source)
-                    db.flush()
-                else:
-                    db_source.current_price = price
-                    db_source.original_price = Decimal(str(r.get("original_price"))) if r.get("original_price") else None
-                    db_source.availability_status = str(r.get("availability_status") or db_source.availability_status)
-                    db_source.last_verified_at = datetime.utcnow()
-                db.add(PriceSnapshot(product_source_id=db_source.id, price=price, availability_status=db_source.availability_status))
-
-                # Use persistent IDs for wishlist/comparison actions in this same response.
-                r["product_source_id"] = db_source.id
-
-                rec_entry = Recommendation(
-                    search_session_id=db_session.id,
-                    product_source_id=db_source.id,
-                    relevance_score=Decimal(str(round(r.get("final_score", 90.0), 2))),
-                    match_explanation=r.get("match_explanation", "Thoughtfully curated match."),
-                    ranking_position=int(r.get("ranking_position", 1)),
+        # Upsert each normalized marketplace source by its provider identity. A source's
+        # database UUID—not a transient connector identifier—is returned to the frontend.
+        for r in ranked_recs:
+            marketplace_name = str(r.get("marketplace_name") or "")
+            marketplace_product_id = str(r.get("product_source_id") or "")
+            title = str(r.get("product_title") or "").strip()
+            product_url = str(r.get("product_url") or r.get("retailer_search_url") or "").strip()
+            image_url = str(r.get("image_url") or "").strip()
+            if not all((marketplace_name, marketplace_product_id, title, product_url, image_url)):
+                continue
+            price = Decimal(str(r.get("price", 0)))
+            if not price.is_finite() or price < 0:
+                continue
+            db_source = db.query(ProductSource).filter(
+                ProductSource.marketplace_name == marketplace_name,
+                ProductSource.marketplace_product_id == marketplace_product_id,
+            ).first()
+            if not db_source:
+                prod = Product(
+                    canonical_name=title,
+                    brand=str(r.get("brand") or "") or None,
+                    category=str(r.get("category") or "General"),
+                    image_url=image_url,
                 )
-                db.add(rec_entry)
+                db.add(prod)
+                db.flush()
+                db_source = ProductSource(
+                    product_id=prod.id,
+                    marketplace_name=marketplace_name,
+                    marketplace_product_id=marketplace_product_id,
+                    product_title=title,
+                    product_url=product_url,
+                    image_url=image_url,
+                    current_price=price,
+                    original_price=Decimal(str(r.get("original_price"))) if r.get("original_price") else None,
+                    currency="INR",
+                    availability_status=str(r.get("availability_status") or "IN_STOCK"),
+                    source_rating=Decimal(str(r.get("source_rating"))) if r.get("source_rating") is not None else None,
+                    source_review_count=int(r["source_review_count"]) if r.get("source_review_count") is not None else None,
+                )
+                db.add(db_source)
+                db.flush()
+            else:
+                db_source.current_price = price
+                db_source.original_price = Decimal(str(r.get("original_price"))) if r.get("original_price") else None
+                db_source.availability_status = str(r.get("availability_status") or db_source.availability_status)
+                db_source.last_verified_at = datetime.utcnow()
+            db.add(PriceSnapshot(product_source_id=db_source.id, price=price, availability_status=db_source.availability_status))
 
-            db.commit()
-            saved_in_db = True
-        except Exception as exc:
-            db.rollback()
-            logger.exception("Authenticated search persistence failed", extra={"reason": type(exc).__name__})
-            raise HTTPException(status_code=status.HTTP_503_SERVICE_UNAVAILABLE, detail="Search results could not be saved. Please retry.") from exc
+            # Use persistent IDs for wishlist/comparison actions in this same response.
+            r["product_source_id"] = db_source.id
+
+            rec_entry = Recommendation(
+                search_session_id=db_session.id,
+                product_source_id=db_source.id,
+                relevance_score=Decimal(str(round(r.get("final_score", 90.0), 2))),
+                match_explanation=r.get("match_explanation", "Thoughtfully curated match."),
+                ranking_position=int(r.get("ranking_position", 1)),
+            )
+            db.add(rec_entry)
+
+        db.commit()
+        saved_in_db = True
+    except Exception as exc:
+        db.rollback()
+        logger.exception("Search persistence failed: %s", exc)
 
     return {
         "search_id": session_id,
@@ -180,15 +188,18 @@ def perform_gift_search(
 @router.get("/{search_id}")
 def get_search_results(
     search_id: str,
-    current_user: User = Depends(get_current_user),
+    current_user: Optional[User] = Depends(get_current_user_optional),
     db: Session = Depends(get_db),
 ):
     """Retrieves stored search session and recommendations from MySQL."""
-    session = (
-        db.query(SearchSession)
-        .filter(SearchSession.id == search_id, SearchSession.user_id == current_user.id)
-        .first()
-    )
+    query = db.query(SearchSession).filter(SearchSession.id == search_id)
+    if current_user:
+        session = query.filter(
+            (SearchSession.user_id == current_user.id) | (SearchSession.user_id.is_(None))
+        ).first()
+    else:
+        session = query.filter(SearchSession.user_id.is_(None)).first()
+
     if not session:
         raise HTTPException(status_code=404, detail="Search session not found")
 

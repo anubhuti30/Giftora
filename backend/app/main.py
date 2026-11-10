@@ -34,14 +34,15 @@ async def lifespan(app: FastAPI):
     # Startup validation
     logger.info("Initializing Giftora API Backend...")
     settings.validate_deployment()
-    db_health = check_database_health()
-    if db_health.get("connected"):
-        logger.info(f"Connected to MySQL 8.0 database '{settings.DB_NAME}' on {settings.DB_HOST}:{settings.DB_PORT}")
-    else:
-        logger.warning(
-            f"Could not connect to MySQL database '{settings.DB_NAME}' on {settings.DB_HOST}:{settings.DB_PORT}. "
-            f"Please verify MySQL80 service and credentials. Operating in resilient standalone mode."
-        )
+    # Ensure database tables exist across MySQL or resilient SQLite fallback
+    try:
+        from app.models import Base
+        from app.core.database import engine
+        Base.metadata.create_all(bind=engine)
+        logger.info("Database schemas verified and created successfully.")
+    except Exception as e:
+        logger.warning(f"Database schema creation warning: {e}")
+
     yield
     logger.info("Shutting down Giftora API Backend...")
 

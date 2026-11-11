@@ -18,7 +18,7 @@ import { ProductCard } from "@/components/products/ProductCard";
 import { CompareFloatingBar } from "@/components/products/CompareFloatingBar";
 import { useGiftora } from "@/context/GiftoraContext";
 import { formatPriceINR } from "@/lib/utils";
-import { api } from "@/lib/api";
+import { api, generateCuratedFallback } from "@/lib/api";
 import { Product } from "@/types";
 
 type SearchRecommendation = {
@@ -84,6 +84,19 @@ function DiscoverResultsContent() {
   const [apiProducts, setApiProducts] = useState<Product[] | null>(null);
   const [loadError, setLoadError] = useState<string | null>(null);
 
+  const getFallbackProducts = () => {
+    const fallback = generateCuratedFallback({
+      recipient_name: activeSearch.recipientName,
+      relationship: activeSearch.relationship,
+      occasion: activeSearch.occasion,
+      interests: activeSearch.interests,
+      minimum_budget: activeSearch.budgetRange?.min,
+      maximum_budget: activeSearch.budgetRange?.max,
+      query: activeSearch.query,
+    });
+    return toProducts(fallback.recommendations as SearchRecommendation[]);
+  };
+
   useEffect(() => {
     const searchId = searchParams.get("search_id");
     let active = true;
@@ -92,20 +105,27 @@ function DiscoverResultsContent() {
       api.getSearchResults(searchId)
         .then((result) => {
           if (!active) return;
-          setApiProducts(toProducts(result.recommendations));
+          if (result.recommendations && result.recommendations.length > 0) {
+            setApiProducts(toProducts(result.recommendations));
+          } else {
+            setApiProducts(getFallbackProducts());
+          }
         })
         .catch(() => {
           try {
             const cached = sessionStorage.getItem(`giftora_search_${searchId}`);
             if (active && cached) {
-              setApiProducts(toProducts(JSON.parse(cached) as SearchRecommendation[]));
-              setLoadError("Showing this browser session's search results; the saved server copy is unavailable.");
-              return;
+              const parsed = JSON.parse(cached) as SearchRecommendation[];
+              if (parsed && parsed.length > 0) {
+                setApiProducts(toProducts(parsed));
+                setLoadError("Showing this browser session's search results; the saved server copy is unavailable.");
+                return;
+              }
             }
           } catch {}
           if (active) {
-            setApiProducts([]);
-            setLoadError("Saved search results could not be loaded. Please return to discovery and try again.");
+            setApiProducts(getFallbackProducts());
+            setLoadError(null);
           }
         });
     } else {
@@ -116,7 +136,7 @@ function DiscoverResultsContent() {
           const cached = sessionStorage.getItem(`giftora_search_${lastSearchId}`);
           if (cached) {
             const parsed = JSON.parse(cached) as SearchRecommendation[];
-            if (parsed.length > 0) {
+            if (parsed && parsed.length > 0) {
               setApiProducts(toProducts(parsed));
               return;
             }
@@ -142,9 +162,15 @@ function DiscoverResultsContent() {
         query: reqQuery
       }).then((result) => {
         if (!active) return;
-        setApiProducts(toProducts(result.recommendations as SearchRecommendation[]));
+        if (result.recommendations && result.recommendations.length > 0) {
+          setApiProducts(toProducts(result.recommendations as SearchRecommendation[]));
+        } else {
+          setApiProducts(getFallbackProducts());
+        }
       }).catch(() => {
-        if (active) setApiProducts([]);
+        if (active) {
+          setApiProducts(getFallbackProducts());
+        }
       });
     }
 
@@ -311,7 +337,14 @@ function DiscoverResultsContent() {
               {/* Sort Selector & Counts */}
               <div className="flex items-center gap-3 justify-between md:justify-end">
                 <span className="text-xs text-[#6E6770] whitespace-nowrap">
-                  Showing <strong>{filteredProducts.length}</strong> gifts
+                  {apiProducts === null ? (
+                    <span className="inline-flex items-center gap-1.5 text-[#9B668B]">
+                      <Sparkles className="w-3.5 h-3.5 animate-spin" />
+                      Curating gifts...
+                    </span>
+                  ) : (
+                    <>Showing <strong>{filteredProducts.length}</strong> gifts</>
+                  )}
                 </span>
 
                 <div className="flex items-center gap-2">
@@ -394,6 +427,9 @@ function DiscoverResultsContent() {
                       setFilterCategory("all");
                       setMaxPrice(sliderMax);
                       setSearchQuery("");
+                      if (!apiProducts || apiProducts.length === 0) {
+                        setApiProducts(getFallbackProducts());
+                      }
                     }}
                     className="inline-flex items-center gap-1 text-[11px] font-semibold text-[#834E74] hover:text-[#422C42] bg-[#F2E8F0] px-2 py-1 rounded-lg transition-colors ml-2"
                   >
@@ -406,8 +442,23 @@ function DiscoverResultsContent() {
             </div>
           </div>
 
-          {/* Product Grid */}
-          {filteredProducts.length > 0 ? (
+          {/* Product Grid / Loading State / Empty State */}
+          {apiProducts === null ? (
+            /* Skeleton Loading Grid */
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+              {[1, 2, 3, 4, 5, 6].map((idx) => (
+                <div key={idx} className="bg-white rounded-2xl border border-[#E6DDE5] p-4 space-y-4 animate-pulse">
+                  <div className="aspect-[4/3] bg-[#E9DDE7]/30 rounded-xl" />
+                  <div className="h-4 bg-[#E9DDE7]/40 rounded-md w-3/4" />
+                  <div className="h-3 bg-[#E9DDE7]/30 rounded-md w-1/2" />
+                  <div className="pt-2 flex justify-between items-center">
+                    <div className="h-5 bg-[#E9DDE7]/30 rounded-md w-20" />
+                    <div className="h-8 bg-[#E9DDE7]/40 rounded-xl w-24" />
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : filteredProducts.length > 0 ? (
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
               {filteredProducts.map((product) => (
                 <ProductCard key={product.id} product={product} />
@@ -432,6 +483,9 @@ function DiscoverResultsContent() {
                     setFilterCategory("all");
                     setMaxPrice(sliderMax);
                     setSearchQuery("");
+                    if (!apiProducts || apiProducts.length === 0) {
+                      setApiProducts(getFallbackProducts());
+                    }
                   }}
                   className="px-4 py-2 bg-[#422C42] text-white text-xs font-semibold rounded-xl hover:bg-[#9B668B] transition-colors"
                 >

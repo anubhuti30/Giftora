@@ -41,4 +41,4 @@ services:
       - key: GEMINI_MODEL
         value: gemini-1.5-flash
       - key: CORS_ORIGINS
-        value: "https://giftora-frontend.onrender.com,http://localhost:3000,https://giftora.vercel.app"
+        value: "https://giftora-fwi0.onrender.com,https://giftora-frontend.onrender.com,http://localhost:3000,https://giftora.vercel.app"

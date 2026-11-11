@@ -20,9 +20,33 @@ export function AppSidebar() {
   const { wishlist, compareList, recipients, user, updateSearchCriteria } = useGiftora();
 
   const recentSearches = [
-    { title: "Sister's 28th Birthday", context: "Pooja • ₹500–₹2,500 • Aromatherapy", recipientName: "Pooja" },
-    { title: "Best Friend Desk Setup", context: "Arjun • ₹2,500–₹5,000 • Tech & Coffee", recipientName: "Arjun" },
-    { title: "Mom's Festival Saree & Ayurveda", context: "Mom • ₹5,000+ • Handloom & Saffron", recipientName: "Meera (Mom)" },
+    { 
+      title: "Sister's 28th Birthday", 
+      context: "Pooja • ₹500–₹2,500 • Aromatherapy", 
+      recipientName: "Pooja",
+      relationship: "Sister",
+      occasion: "Birthday",
+      interests: ["Aromatherapy & Candles", "Specialty Coffee", "Ceramics & Pottery"],
+      budgetRange: { min: 500, max: 2500 },
+    },
+    { 
+      title: "Best Friend Desk Setup", 
+      context: "Arjun • ₹2,500–₹5,000 • Tech & Coffee", 
+      recipientName: "Arjun",
+      relationship: "Best Friend",
+      occasion: "Birthday",
+      interests: ["Minimalist Tech", "Specialty Coffee"],
+      budgetRange: { min: 2500, max: 5000 },
+    },
+    { 
+      title: "Mom's Festival Saree & Ayurveda", 
+      context: "Mom • ₹5,000+ • Handloom & Saffron", 
+      recipientName: "Meera (Mom)",
+      relationship: "Mom",
+      occasion: "Festivals",
+      interests: ["Luxury Ayurvedic Skincare", "Artisanal Sweets & Dark Chocolate"],
+      budgetRange: { min: 5000, max: 50000 },
+    },
   ];
 
   return (
@@ -186,6 +210,16 @@ export function AppSidebar() {
               <Link
                 key={idx}
                 href="/discover/results"
+                onClick={() => {
+                  updateSearchCriteria({
+                    recipientName: item.recipientName,
+                    relationship: item.relationship,
+                    occasion: item.occasion,
+                    interests: item.interests,
+                    budgetRange: item.budgetRange,
+                    query: `Gifts for ${item.recipientName}`,
+                  });
+                }}
                 className="block px-3 py-2 rounded-xl hover:bg-white transition-colors text-left"
               >
                 <p className="text-xs font-medium text-[#29252A] truncate">
